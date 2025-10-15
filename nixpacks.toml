@@ -1,13 +1,13 @@
-providers = ["node"]
+providers = ["python"]
 
 [phases.setup]
-nixPkgs = ["curl", "unzip", "nodejs"]
+nixPkgs = ["curl", "unzip", "python311", "python311Packages.pip"]
 
 [phases.install]
 cmds = [
   "bash download-source.sh",
-  "if [ -f package.json ]; then npm install --production; fi"
+  "if [ -f requirements.txt ]; then pip install -r requirements.txt; fi"
 ]
 
 [start]
-cmd = "if [ -f package.json ]; then npm start; else echo 'No package.json found' && exit 1; fi"
+cmd = "uvicorn main:app --host 0.0.0.0 --port 8000"
