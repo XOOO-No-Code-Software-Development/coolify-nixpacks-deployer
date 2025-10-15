@@ -41,6 +41,14 @@ if [ -n "$extracted_dir" ]; then
   rmdir "$extracted_dir" 2>/dev/null || true
 fi
 
+# If there's a backend directory, move its contents to root
+if [ -d "backend" ]; then
+  echo "📁 Moving backend contents to root directory..."
+  shopt -s dotglob
+  mv backend/* . 2>/dev/null || true
+  rmdir backend 2>/dev/null || true
+fi
+
 # Clean up
 rm -f source.zip
 
