@@ -6,7 +6,7 @@ nixPkgs = ["curl", "unzip", "nodejs"]
 [phases.install]
 cmds = [
   "bash download-source.sh",
-  "if [ -f package.json ]; then npm ci --production; fi"
+  "if [ -f package.json ]; then npm install --production; fi"
 ]
 
 [start]
