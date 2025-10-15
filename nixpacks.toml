@@ -1,3 +1,5 @@
+providers = ["node"]
+
 [phases.setup]
 nixPkgs = ["curl", "unzip", "nodejs", "npm"]
 
