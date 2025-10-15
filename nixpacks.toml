@@ -1,0 +1,11 @@
+[phases.setup]
+nixPkgs = ["curl", "unzip"]
+
+[phases.install]
+cmds = [
+  "bash download-source.sh",
+  "if [ -f package.json ]; then npm ci --production; fi"
+]
+
+[start]
+cmd = "if [ -f package.json ]; then npm start; else echo 'No package.json found' && exit 1; fi"

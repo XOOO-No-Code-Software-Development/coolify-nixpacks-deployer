@@ -3,6 +3,7 @@
 
 # But keep these essential files
 !download-source.sh
+!nixpacks.toml
 !README.md
 !.gitignore
 !LICENSE
