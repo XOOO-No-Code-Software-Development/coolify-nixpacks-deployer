@@ -6,5 +6,6 @@ nixPkgs = ["curl", "unzip", "python311", "python311Packages.pip"]
 [phases.install]
 cmds = [
   "bash download-source.sh",
+  "pip install uvicorn",
   "if [ -f requirements.txt ]; then pip install -r requirements.txt; fi"
 ]
