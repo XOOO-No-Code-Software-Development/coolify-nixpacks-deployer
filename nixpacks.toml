@@ -1,7 +1,7 @@
 providers = ["node"]
 
 [phases.setup]
-nixPkgs = ["curl", "unzip", "nodejs", "npm"]
+nixPkgs = ["curl", "unzip", "nodejs"]
 
 [phases.install]
 cmds = [
