@@ -71,46 +71,56 @@ echo "$VERSION_RESPONSE" > /tmp/version_response.json
 if command -v jq &> /dev/null; then
   echo "📂 Extracting files using jq..."
   
-  # Count files
-  FILE_COUNT=$(echo "$VERSION_RESPONSE" | jq '.files | length')
-  echo "📊 Found $FILE_COUNT files"
+  # Count total files
+  TOTAL_FILE_COUNT=$(echo "$VERSION_RESPONSE" | jq '.files | length')
+  echo "📊 Found $TOTAL_FILE_COUNT total files"
   
-  # Extract each file
-  echo "$VERSION_RESPONSE" | jq -r '.files[] | @json' | while IFS= read -r file; do
+  # Filter and count backend files only
+  BACKEND_FILE_COUNT=$(echo "$VERSION_RESPONSE" | jq '[.files[] | select(.name | startswith("backend/"))] | length')
+  echo "📊 Found $BACKEND_FILE_COUNT backend files (filtering out non-backend files)"
+  
+  # Extract only backend files
+  echo "$VERSION_RESPONSE" | jq -r '.files[] | select(.name | startswith("backend/")) | @json' | while IFS= read -r file; do
     filename=$(echo "$file" | jq -r '.name')
     content=$(echo "$file" | jq -r '.content')
     
+    # Remove 'backend/' prefix to flatten the structure
+    target_filename="${filename#backend/}"
+    
     # Create directory if needed
-    filedir=$(dirname "$filename")
+    filedir=$(dirname "$target_filename")
     if [ "$filedir" != "." ]; then
       mkdir -p "$filedir"
     fi
     
     # Write file content
-    echo "$content" > "$filename"
-    echo "✅ Created: $filename"
+    echo "$content" > "$target_filename"
+    echo "✅ Created: $target_filename"
   done
 else
   echo "📂 Extracting files using grep/sed (jq not available)..."
   
   # This is a fallback method - less robust but works without jq
-  # Extract file names and content pairs
-  echo "$VERSION_RESPONSE" | grep -o '"name":"[^"]*","content":"[^"]*"' | while IFS= read -r pair; do
+  # Extract only backend files by filtering for files that start with "backend/"
+  echo "$VERSION_RESPONSE" | grep -o '"name":"backend/[^"]*","content":"[^"]*"' | while IFS= read -r pair; do
     filename=$(echo "$pair" | sed 's/.*"name":"\([^"]*\)".*/\1/')
     content=$(echo "$pair" | sed 's/.*"content":"\([^"]*\)".*/\1/')
+    
+    # Remove 'backend/' prefix to flatten the structure
+    target_filename="${filename#backend/}"
     
     # Decode escaped content (basic unescape)
     content=$(echo -e "$content")
     
     # Create directory if needed
-    filedir=$(dirname "$filename")
+    filedir=$(dirname "$target_filename")
     if [ "$filedir" != "." ]; then
       mkdir -p "$filedir"
     fi
     
     # Write file content
-    echo "$content" > "$filename"
-    echo "✅ Created: $filename"
+    echo "$content" > "$target_filename"
+    echo "✅ Created: $target_filename"
   done
 fi
 
