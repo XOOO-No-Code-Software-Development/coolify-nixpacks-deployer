@@ -28,25 +28,8 @@ echo "📦 Chat ID: $CHAT_ID"
 echo "📦 Version ID: $VERSION_ID"
 echo "🌐 API URL: $V0_API_URL"
 
-# If VERSION_ID is "latest", resolve it to the actual latest version
-if [ "$VERSION_ID" = "latest" ]; then
-  echo "🔍 Resolving 'latest' version..."
-  
-  # Fetch chat details to get the latest version ID
-  CHAT_RESPONSE=$(curl -s -f -H "Authorization: Bearer $V0_API_KEY" \
-    "$V0_API_URL/chats/$CHAT_ID")
-  
-  # Extract latestVersion.id using grep and sed
-  RESOLVED_VERSION_ID=$(echo "$CHAT_RESPONSE" | grep -o '"latestVersion"[^}]*"id":"[^"]*"' | sed 's/.*"id":"\([^"]*\)".*/\1/')
-  
-  if [ -z "$RESOLVED_VERSION_ID" ]; then
-    echo "❌ ERROR: Could not resolve latest version ID"
-    exit 1
-  fi
-  
-  echo "✅ Resolved to version: $RESOLVED_VERSION_ID"
-  VERSION_ID="$RESOLVED_VERSION_ID"
-fi
+# Use the provided VERSION_ID directly (no "latest" resolution needed)
+echo "� Using version ID: $VERSION_ID"
 
 # Clean current directory (except this script and .git)
 echo "🧹 Cleaning workspace..."
@@ -61,8 +44,22 @@ find . -mindepth 1 -maxdepth 1 \
 
 # Fetch version files from v0 API
 echo "⬇️  Fetching version files from v0 API..."
-VERSION_RESPONSE=$(curl -s -f -H "Authorization: Bearer $V0_API_KEY" \
+echo "🌐 Making API request to: $V0_API_URL/chats/$CHAT_ID/versions/$VERSION_ID"
+VERSION_RESPONSE=$(curl -s -w "HTTP_STATUS:%{http_code}" -H "Authorization: Bearer $V0_API_KEY" \
   "$V0_API_URL/chats/$CHAT_ID/versions/$VERSION_ID?includeDefaultFiles=true")
+
+# Extract HTTP status code
+HTTP_STATUS=$(echo "$VERSION_RESPONSE" | grep -o "HTTP_STATUS:[0-9]*" | cut -d: -f2)
+# Remove status line from response
+VERSION_RESPONSE=$(echo "$VERSION_RESPONSE" | sed 's/HTTP_STATUS:[0-9]*$//')
+
+echo "📡 API Response Status: $HTTP_STATUS"
+
+if [ "$HTTP_STATUS" != "200" ]; then
+  echo "❌ ERROR: Version API request failed with status $HTTP_STATUS"
+  echo "Response: $VERSION_RESPONSE"
+  exit 1
+fi
 
 # Save response to temporary file for processing
 echo "$VERSION_RESPONSE" > /tmp/version_response.json
