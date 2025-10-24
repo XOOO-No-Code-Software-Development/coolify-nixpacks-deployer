@@ -2,7 +2,7 @@
 set -e
 
 echo "=================================================="
-echo "Downloading source code from v0 API"
+echo "Preparing source code"
 echo "=================================================="
 
 # Check required environment variables
@@ -16,6 +16,23 @@ if [ -z "$VERSION_ID" ]; then
   exit 1
 fi
 
+echo "📦 Chat ID: $CHAT_ID"
+echo "📦 Version ID: $VERSION_ID"
+
+# Check if VERSION_ID is "initial"
+if [ "$VERSION_ID" = "initial" ]; then
+  echo "🎯 Version is 'initial' - using default backend template"
+  echo "✅ Keeping existing backend folder content"
+  echo "📋 Files in backend folder:"
+  ls -la backend/
+  echo ""
+  echo "✅ Source code ready (using defaults)!"
+  exit 0
+fi
+
+# For non-initial versions, fetch from API
+echo "🎯 Version is '$VERSION_ID' - fetching from v0 API"
+
 if [ -z "$V0_API_KEY" ]; then
   echo "❌ ERROR: V0_API_KEY environment variable not set"
   exit 1
@@ -23,13 +40,11 @@ fi
 
 # Use custom V0_API_URL if set, otherwise use default
 V0_API_URL="${V0_API_URL:-https://api.v0.dev/v1}"
-
-echo "📦 Chat ID: $CHAT_ID"
-echo "📦 Version ID: $VERSION_ID"
 echo "🌐 API URL: $V0_API_URL"
 
-# Use the provided VERSION_ID directly (no "latest" resolution needed)
-echo "� Using version ID: $VERSION_ID"
+# Remove default backend folder before fetching new content
+echo "🧹 Removing default backend folder..."
+rm -rf backend
 
 # Clean current directory (except this script and .git)
 echo "🧹 Cleaning workspace..."
@@ -131,5 +146,5 @@ ls -la
 
 echo ""
 echo "=================================================="
-echo "Nixpacks will now auto-detect and build your app"
+echo "Docker will now build your app"
 echo "=================================================="
