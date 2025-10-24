@@ -1,7 +1,7 @@
 providers = ["python"]
 
 [phases.setup]
-nixPkgs = ["curl", "unzip", "python311", "python311Packages.pip"]
+nixPkgs = ["curl", "jq", "python311", "python311Packages.pip"]
 
 [phases.install]
 cmds = [
