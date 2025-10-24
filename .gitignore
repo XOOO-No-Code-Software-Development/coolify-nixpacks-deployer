@@ -1,5 +1,5 @@
 # Ignore everything that might be downloaded
-*
+
 
 # But keep these essential files
 !download-source.sh
