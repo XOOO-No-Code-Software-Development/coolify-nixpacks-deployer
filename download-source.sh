@@ -22,9 +22,19 @@ echo "📦 Version ID: $VERSION_ID"
 # Check if VERSION_ID is "initial"
 if [ "$VERSION_ID" = "initial" ]; then
   echo "🎯 Version is 'initial' - using default backend template"
-  echo "✅ Keeping existing backend folder content"
-  echo "📋 Files in backend folder:"
-  ls -la backend/
+  echo "📂 Moving backend template files to root directory..."
+  
+  # Move all files from backend/ to root
+  if [ -d "backend" ]; then
+    # Remove .DS_Store and other hidden files first
+    find backend -name ".DS_Store" -delete
+    mv backend/* .
+    rm -rf backend
+    echo "✅ Template files moved to root"
+  fi
+  
+  echo "📋 Files in workspace:"
+  ls -la
   echo ""
   echo "✅ Source code ready (using defaults)!"
   exit 0
