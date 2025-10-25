@@ -20,11 +20,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/", tags=["health"])
-async def root():
-    """Health check endpoint"""
+@app.get("/health", tags=["health"])
+async def health():
+    """Health check endpoint for monitoring"""
     return {
         "status": "ok",
-        "message": "Todo App API is running",
+        "message": "Backend is healthy",
         "version": "1.0.0"
     }
