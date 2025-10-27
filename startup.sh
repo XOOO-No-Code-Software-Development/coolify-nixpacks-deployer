@@ -1,48 +1,33 @@
 #!/bin/bash
 
-echo "=============================================="
-echo "🚀 Starting Application Deployment"
-echo "=============================================="
-echo "📅 Timestamp: $(date)"
-echo "🐍 Python Version: $(python --version)"
-echo "📦 Working Directory: $(pwd)"
-echo "📋 Environment Variables:"
-echo "  - CHAT_ID: $CHAT_ID"
-echo "  - VERSION_ID: $VERSION_ID"
-echo "  - V0_API_URL: $V0_API_URL"
-echo "=============================================="
-
 # Activate virtual environment
-echo "🔧 Activating virtual environment..."
 source /opt/venv/bin/activate
 
-echo "📦 Installed packages:"
-pip list
-
-echo "🔍 Checking main.py imports..."
+# Test application startup - catch all errors
 python -c "
 import sys
 try:
-    print('✅ Testing imports...')
     import main
-    print('✅ All imports successful!')
-except ImportError as e:
-    print(f'❌ Import Error: {e}')
-    print('📦 Missing dependencies detected!')
-    print('💡 This is likely the cause of deployment failure.')
-    sys.exit(1)
+    # Try to create the FastAPI app to catch configuration errors
+    app = main.app
 except Exception as e:
-    print(f'❌ Other Error: {e}')
+    print(f'❌ Error: {e}')
+    print(f'❌ Error Type: {type(e).__name__}')
+    import traceback
+    print('❌ Full traceback:')
+    traceback.print_exc()
     sys.exit(1)
-"
+" 2>&1
 
 if [ $? -ne 0 ]; then
-    echo "❌ Import test failed - keeping container alive for debugging..."
-    echo "🔧 You can check logs in Coolify to see the exact error"
-    echo "⏰ Container will stay alive for 1 hour for debugging"
+    echo "❌ Application startup test failed - keeping container alive for debugging..."
     sleep 3600
     exit 1
 fi
 
-echo "🚀 Starting uvicorn server..."
-uvicorn main:app --host 0.0.0.0 --port 8000
+# Start the application - if it fails, show the error and keep container alive
+uvicorn main:app --host 0.0.0.0 --port 8000 || {
+    echo "❌ uvicorn failed to start - keeping container alive for debugging..."
+    sleep 3600
+    exit 1
+}

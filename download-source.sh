@@ -149,20 +149,6 @@ fi
 # Clean up temporary file
 rm -f /tmp/version_response.json
 
-# Fix common missing dependencies in requirements.txt
-if [ -f "requirements.txt" ]; then
-  echo "🔧 Checking and fixing requirements.txt..."
-  
-  # Check if email-validator is missing but EmailStr is used in the code
-  if grep -q "EmailStr" *.py 2>/dev/null && ! grep -q "email.validator\|email_validator" requirements.txt; then
-    echo "📦 Adding missing email-validator dependency..."
-    echo "email-validator" >> requirements.txt
-  fi
-  
-  echo "📋 Final requirements.txt:"
-  cat requirements.txt
-fi
-
 echo "✅ Source code ready!"
 echo ""
 echo "📋 Files in workspace:"
