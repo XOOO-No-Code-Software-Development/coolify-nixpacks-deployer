@@ -8,5 +8,6 @@ cmds = [
   "bash download-source.sh",
   "python -m venv /opt/venv",
   ". /opt/venv/bin/activate && pip install uvicorn",
-  ". /opt/venv/bin/activate && if [ -f requirements.txt ]; then pip install -r requirements.txt; fi"
+  ". /opt/venv/bin/activate && if [ -f requirements.txt ]; then pip install -r requirements.txt; fi",
+  ". /opt/venv/bin/activate && python -c 'import main; app = main.app; print(\"✅ Application validation successful\")'"
 ]
