@@ -20,14 +20,9 @@ except Exception as e:
 " 2>&1
 
 if [ $? -ne 0 ]; then
-    echo "❌ Application startup test failed - keeping container alive for debugging..."
-    sleep 3600
+    echo "❌ Application startup test failed"
     exit 1
 fi
 
-# Start the application - if it fails, show the error and keep container alive
-uvicorn main:app --host 0.0.0.0 --port 8000 || {
-    echo "❌ uvicorn failed to start - keeping container alive for debugging..."
-    sleep 3600
-    exit 1
-}
+# Start the application - if it fails, exit with error code
+uvicorn main:app --host 0.0.0.0 --port 8000
