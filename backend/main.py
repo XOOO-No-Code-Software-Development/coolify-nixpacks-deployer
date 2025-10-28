@@ -25,7 +25,7 @@ async def root():
     """Health check endpoint"""
     return {
         "status": "ok",
-        "message": "Todo App API is running",
+        "message": "Backend is running",
         "version": "1.0.0"
     }
 
