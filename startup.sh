@@ -19,7 +19,13 @@ if [ ! -z "$DATABASE_URL" ]; then
     echo "🗄️  Starting pgweb database interface..."
     
     # Set pgweb configuration
-    export PGWEB_DATABASE_URL="$DATABASE_URL"
+    # Add sslmode=disable to the DATABASE_URL if it doesn't have SSL params
+    if [[ "$DATABASE_URL" != *"sslmode="* ]]; then
+        export PGWEB_DATABASE_URL="${DATABASE_URL}?sslmode=disable"
+    else
+        export PGWEB_DATABASE_URL="$DATABASE_URL"
+    fi
+    
     export PGWEB_URL_PREFIX="/pgweb"
     export PGWEB_SESSIONS="true"
     export PGWEB_LOCK_SESSION="false"
