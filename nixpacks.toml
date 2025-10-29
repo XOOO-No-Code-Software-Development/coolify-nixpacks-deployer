@@ -11,9 +11,6 @@ cmds = [
   ". /opt/venv/bin/activate && if [ -f requirements.txt ]; then pip install -r requirements.txt; fi",
   ". /opt/venv/bin/activate && python -c 'import main; app = main.app; print(\"✅ Application validation successful\")'",
   "# Install pgweb for database management",
-  "wget -O /tmp/pgweb.tar.gz https://github.com/sosedoff/pgweb/releases/download/v0.15.0/pgweb_linux_amd64.tar.gz",
-  "tar -xzf /tmp/pgweb.tar.gz -C /tmp",
-  "mv /tmp/pgweb_linux_amd64 /usr/local/bin/pgweb",
-  "chmod +x /usr/local/bin/pgweb",
-  "rm /tmp/pgweb.tar.gz"
+  "wget -O /usr/local/bin/pgweb https://github.com/sosedoff/pgweb/releases/download/v0.16.2/pgweb_linux_amd64",
+  "chmod +x /usr/local/bin/pgweb"
 ]
