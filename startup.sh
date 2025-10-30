@@ -94,34 +94,6 @@ EOF
         echo "✗ servers.json NOT FOUND!"
     fi
     
-    # Run pgAdmin setup to initialize database and load servers
-    cd /opt/venv/lib/python3.11/site-packages/pgadmin4
-    echo "🔧 Loading servers into pgAdmin..."
-    python3 -c "
-import sys
-import json
-import os
-sys.path.insert(0, '.')
-
-# Set environment for pgAdmin
-os.environ['PGADMIN_SETUP_EMAIL'] = '${PGADMIN_SETUP_EMAIL}'
-os.environ['PGADMIN_SETUP_PASSWORD'] = '${PGADMIN_SETUP_PASSWORD}'
-
-from pgadmin.setup import load_servers
-from pgadmin import create_app
-
-try:
-    app = create_app()
-    with app.app_context():
-        print('Loading servers from /tmp/pgadmin/servers.json...')
-        load_servers('/tmp/pgadmin/servers.json')
-        print('✓ Servers loaded successfully')
-except Exception as e:
-    print(f'✗ Error loading servers: {e}')
-    import traceback
-    traceback.print_exc()
-" 2>&1 || echo "⚠️ Server loading failed with code $?"
-    
     # Start pgAdmin on port 8081 using gunicorn
     cd /tmp/pgadmin
     gunicorn --bind 0.0.0.0:8081 --workers=1 --threads=25 --chdir /opt/venv/lib/python3.11/site-packages/pgadmin4 pgAdmin4:app &
@@ -131,6 +103,39 @@ except Exception as e:
     echo "📊 Database UI: http://localhost:8081"
     echo "   Login: ${PGADMIN_SETUP_EMAIL}"
     echo "   Password: ${PGADMIN_SETUP_PASSWORD}"
+    
+    # Wait for pgAdmin to be ready, then add server via API
+    (
+        sleep 5
+        echo "🔧 Adding server via pgAdmin API..."
+        
+        # Login to get session cookie
+        SESSION_COOKIE=$(curl -s -c - -X POST http://localhost:8081/login \
+            -H "Content-Type: application/json" \
+            -d "{\"email\":\"${PGADMIN_SETUP_EMAIL}\",\"password\":\"${PGADMIN_SETUP_PASSWORD}\"}" \
+            | grep pga4_session | awk '{print $7}')
+        
+        if [ ! -z "$SESSION_COOKIE" ]; then
+            echo "✓ Logged in to pgAdmin"
+            
+            # Add server via API
+            curl -s -X POST http://localhost:8081/browser/server/obj/ \
+                -H "Content-Type: application/json" \
+                -H "Cookie: pga4_session=$SESSION_COOKIE" \
+                -d "{
+                    \"name\": \"Chat Database\",
+                    \"host\": \"${DB_HOST}\",
+                    \"port\": ${DB_PORT},
+                    \"maintenance_db\": \"${DB_NAME}\",
+                    \"username\": \"${DB_USER}\",
+                    \"password\": \"${DB_PASS}\",
+                    \"ssl_mode\": \"disable\",
+                    \"connect_now\": true
+                }" && echo "✓ Server added successfully" || echo "⚠️ Failed to add server"
+        else
+            echo "⚠️ Failed to login to pgAdmin API"
+        fi
+    ) &
 else
     echo "⚠️  DATABASE_URL not set, pgAdmin will not be started"
 fi
