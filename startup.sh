@@ -35,7 +35,7 @@ if [ ! -z "$DATABASE_URL" ]; then
     # Create config_local.py to override pgAdmin settings
     cat > /opt/venv/lib/python3.11/site-packages/pgadmin4/config_local.py << 'PYEOF'
 import os
-SERVER_MODE = False
+SERVER_MODE = True
 MASTER_PASSWORD_REQUIRED = False
 DEFAULT_SERVER = '0.0.0.0'
 DEFAULT_SERVER_PORT = 8081
@@ -48,6 +48,10 @@ WTF_CSRF_ENABLED = False
 # Load servers from JSON file on startup
 SERVER_JSON_FILE = '/tmp/pgadmin/servers.json'
 PYEOF
+    
+    # Set pgAdmin default credentials
+    export PGADMIN_SETUP_EMAIL="${PGADMIN_EMAIL:-admin@admin.com}"
+    export PGADMIN_SETUP_PASSWORD="${PGADMIN_PASSWORD:-admin}"
     
     # Set pgAdmin environment variables for non-interactive setup
     export PGADMIN_SETUP_EMAIL="${PGADMIN_EMAIL:-admin@admin.com}"
@@ -86,8 +90,8 @@ EOF
     
     echo "✅ pgAdmin started on port 8081"
     echo "📊 Database UI: http://localhost:8081"
-    echo "   Email: ${PGADMIN_DEFAULT_EMAIL}"
-    echo "   Password: ${PGADMIN_DEFAULT_PASSWORD}"
+    echo "   Login: ${PGADMIN_SETUP_EMAIL}"
+    echo "   Password: ${PGADMIN_SETUP_PASSWORD}"
 else
     echo "⚠️  DATABASE_URL not set, pgAdmin will not be started"
 fi
