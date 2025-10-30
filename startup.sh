@@ -30,7 +30,7 @@ if [ ! -z "$DATABASE_URL" ]; then
     DB_NAME=$(echo $DB_URL | sed -n 's/.*\/\([^?]*\).*/\1/p')
     
     # Create pgAdmin config and data directories
-    mkdir -p /tmp/pgadmin/data /tmp/pgadmin/sessions
+    mkdir -p /tmp/pgadmin/data /tmp/pgadmin/sessions /tmp/pgadmin/storage
     
     # Create config_local.py to override pgAdmin settings
     cat > /opt/venv/lib/python3.11/site-packages/pgadmin4/config_local.py << 'PYEOF'
@@ -45,6 +45,8 @@ SQLITE_PATH = '/tmp/pgadmin/data/pgadmin4.db'
 SESSION_DB_PATH = '/tmp/pgadmin/sessions'
 STORAGE_DIR = '/tmp/pgadmin/storage'
 WTF_CSRF_ENABLED = False
+# Load servers from JSON file on startup
+SERVER_JSON_FILE = '/tmp/pgadmin/servers.json'
 PYEOF
     
     # Set pgAdmin environment variables for non-interactive setup
@@ -73,87 +75,8 @@ EOF
     echo "${DB_HOST}:${DB_PORT}:${DB_NAME}:${DB_USER}:${DB_PASS}" > /tmp/pgadmin/.pgpass
     chmod 600 /tmp/pgadmin/.pgpass
     
-    # Initialize pgAdmin database and add server configuration
-    cd /opt/venv/lib/python3.11/site-packages/pgadmin4
-    
-    # Pass database details as environment variables to Python
-    export PGADMIN_DB_HOST="${DB_HOST}"
-    export PGADMIN_DB_PORT="${DB_PORT}"
-    export PGADMIN_DB_NAME="${DB_NAME}"
-    export PGADMIN_DB_USER="${DB_USER}"
-    
-    python3 << 'PYEOF'
-import sys
-import os
-sys.path.insert(0, '.')
-
-try:
-    from pgadmin.setup import setup_db
-    from pgadmin.model import db, Server, ServerGroup, User
-    from pgadmin import create_app
-    
-    # Get database details from environment
-    db_host = os.environ.get('PGADMIN_DB_HOST')
-    db_port = int(os.environ.get('PGADMIN_DB_PORT', '5432'))
-    db_name = os.environ.get('PGADMIN_DB_NAME')
-    db_user = os.environ.get('PGADMIN_DB_USER')
-    
-    app = create_app()
-    with app.app_context():
-        # Setup database
-        setup_db(app)
-        
-        # Create default user if needed (for desktop mode)
-        user = User.query.filter_by(email='admin@admin.com').first()
-        if not user:
-            user = User(
-                email='admin@admin.com',
-                active=True,
-                role=1
-            )
-            user.password = 'admin'
-            db.session.add(user)
-            db.session.commit()
-            print('✓ User created')
-        else:
-            print('✓ User already exists')
-        
-        # Add server group if not exists
-        group = ServerGroup.query.filter_by(user_id=user.id, name='Servers').first()
-        if not group:
-            group = ServerGroup(user_id=user.id, name='Servers')
-            db.session.add(group)
-            db.session.commit()
-            print('✓ Server group created')
-        else:
-            print('✓ Server group already exists')
-        
-        # Add server connection
-        server = Server.query.filter_by(user_id=user.id, name='Chat Database').first()
-        if not server:
-            server = Server(
-                user_id=user.id,
-                servergroup_id=group.id,
-                name='Chat Database',
-                host=db_host,
-                port=db_port,
-                maintenance_db=db_name,
-                username=db_user,
-                ssl_mode='disable'
-            )
-            db.session.add(server)
-            db.session.commit()
-            print('✓ Server connection added successfully')
-            print(f'  Host: {db_host}:{db_port}')
-            print(f'  Database: {db_name}')
-            print(f'  User: {db_user}')
-        else:
-            print('✓ Server connection already exists')
-except Exception as e:
-    print(f'✗ Error setting up pgAdmin: {e}')
-    import traceback
-    traceback.print_exc()
-PYEOF
+    # Set environment variable for pgAdmin to load servers
+    export PGADMIN_SERVER_JSON_FILE=/tmp/pgadmin/servers.json
     
     # Start pgAdmin on port 8081 using gunicorn
     cd /tmp/pgadmin
