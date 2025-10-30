@@ -3,8 +3,8 @@
 # Function to handle shutdown
 shutdown() {
     echo "Shutting down services..."
-    kill $PGWEB_PID $UVICORN_PID 2>/dev/null
-    wait $PGWEB_PID $UVICORN_PID 2>/dev/null
+    kill $PGWEB_PID $POSTGREST_PID $UVICORN_PID 2>/dev/null
+    wait $PGWEB_PID $POSTGREST_PID $UVICORN_PID 2>/dev/null
     exit 0
 }
 
@@ -45,6 +45,36 @@ else
     echo "⚠️  DATABASE_URL not set, pgweb will not be started"
 fi
 
+# Start PostgREST if DATABASE_URL is set
+if [ ! -z "$DATABASE_URL" ]; then
+    echo "🗄️  Starting PostgREST REST API..."
+    
+    # Parse DATABASE_URL to extract connection details
+    # Format: postgresql://user:pass@host:port/dbname
+    DB_URI="${DATABASE_URL}"
+    if [[ "$DB_URI" != *"sslmode="* ]]; then
+        DB_URI="${DB_URI}?sslmode=disable"
+    fi
+    
+    # Create PostgREST config file
+    cat > /tmp/postgrest.conf << EOF
+db-uri = "${DB_URI}"
+db-anon-role = "postgres"
+db-schema = "public"
+server-host = "0.0.0.0"
+server-port = 3000
+EOF
+    
+    # Start PostgREST on port 3000
+    /usr/local/bin/postgrest /tmp/postgrest.conf &
+    POSTGREST_PID=$!
+    
+    echo "✅ PostgREST started on port 3000"
+    echo "📊 REST API: http://localhost:3000"
+else
+    echo "⚠️  DATABASE_URL not set, PostgREST will not be started"
+fi
+
 # Start the FastAPI application
 echo "🚀 Starting FastAPI application..."
 uvicorn main:app --host 0.0.0.0 --port 8000 &
@@ -55,6 +85,7 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "🌐 API:      http://localhost:8000"
 if [ ! -z "$DATABASE_URL" ]; then
     echo "🗄️  pgweb:    http://localhost:8081"
+    echo "🔌 PostgREST: http://localhost:3000"
 fi
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 

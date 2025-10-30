@@ -15,5 +15,11 @@ cmds = [
   "unzip -o /tmp/pgweb.zip -d /tmp",
   "mv /tmp/pgweb_linux_amd64 /usr/local/bin/pgweb",
   "chmod +x /usr/local/bin/pgweb",
-  "rm /tmp/pgweb.zip"
+  "rm /tmp/pgweb.zip",
+  "# Install PostgREST",
+  "wget -O /tmp/postgrest.tar.xz https://github.com/PostgREST/postgrest/releases/download/v12.2.3/postgrest-v12.2.3-linux-static-x64.tar.xz",
+  "tar -xJf /tmp/postgrest.tar.xz -C /tmp",
+  "mv /tmp/postgrest /usr/local/bin/postgrest",
+  "chmod +x /usr/local/bin/postgrest",
+  "rm /tmp/postgrest.tar.xz"
 ]
