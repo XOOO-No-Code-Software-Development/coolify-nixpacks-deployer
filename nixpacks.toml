@@ -1,7 +1,7 @@
 providers = ["python"]
 
 [phases.setup]
-nixPkgs = ["curl", "jq", "python311", "python311Packages.pip", "wget", "unzip"]
+nixPkgs = ["curl", "jq", "python311", "python311Packages.pip", "wget"]
 
 [phases.install]
 cmds = [
@@ -10,12 +10,6 @@ cmds = [
   ". /opt/venv/bin/activate && pip install uvicorn",
   ". /opt/venv/bin/activate && if [ -f requirements.txt ]; then pip install -r requirements.txt; fi",
   ". /opt/venv/bin/activate && python -c 'import main; app = main.app; print(\"✅ Application validation successful\")'",
-  "# Install pgweb for database management",
-  "wget -O /tmp/pgweb.zip https://github.com/sosedoff/pgweb/releases/download/v0.16.2/pgweb_linux_amd64.zip",
-  "unzip -o /tmp/pgweb.zip -d /tmp",
-  "mv /tmp/pgweb_linux_amd64 /usr/local/bin/pgweb",
-  "chmod +x /usr/local/bin/pgweb",
-  "rm /tmp/pgweb.zip",
   "# Install PostgREST",
   "wget -O /tmp/postgrest.tar.xz https://github.com/PostgREST/postgrest/releases/download/v12.2.3/postgrest-v12.2.3-linux-static-x64.tar.xz",
   "tar -xJf /tmp/postgrest.tar.xz -C /tmp",
