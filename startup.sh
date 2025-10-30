@@ -3,8 +3,8 @@
 # Function to handle shutdown
 shutdown() {
     echo "Shutting down services..."
-    kill $PGWEB_PID $POSTGREST_PID $UVICORN_PID 2>/dev/null
-    wait $PGWEB_PID $POSTGREST_PID $UVICORN_PID 2>/dev/null
+    kill $PGADMIN_PID $POSTGREST_PID $UVICORN_PID 2>/dev/null
+    wait $PGADMIN_PID $POSTGREST_PID $UVICORN_PID 2>/dev/null
     exit 0
 }
 
@@ -14,35 +14,62 @@ trap shutdown SIGTERM SIGINT
 # Activate virtual environment
 source /opt/venv/bin/activate
 
-# Start pgweb in the background if DATABASE_URL is set
+# Start pgAdmin in the background if DATABASE_URL is set
 if [ ! -z "$DATABASE_URL" ]; then
-    echo "🗄️  Starting pgweb database interface..."
+    echo "🗄️  Starting pgAdmin..."
     
-    # Set pgweb configuration
-    # Add sslmode=disable to the DATABASE_URL if it doesn't have SSL params
-    if [[ "$DATABASE_URL" != *"sslmode="* ]]; then
-        export PGWEB_DATABASE_URL="${DATABASE_URL}?sslmode=disable"
-    else
-        export PGWEB_DATABASE_URL="$DATABASE_URL"
-    fi
+    # Parse DATABASE_URL to extract connection details
+    # Format: postgresql://user:pass@host:port/dbname
+    DB_URL="${DATABASE_URL}"
     
-    export PGWEB_URL_PREFIX="/pgweb"
-    export PGWEB_SESSIONS="true"
-    export PGWEB_LOCK_SESSION="false"
+    # Extract database connection details
+    DB_USER=$(echo $DB_URL | sed -n 's/.*:\/\/\([^:]*\):.*@.*/\1/p')
+    DB_PASS=$(echo $DB_URL | sed -n 's/.*:\/\/[^:]*:\([^@]*\)@.*/\1/p')
+    DB_HOST=$(echo $DB_URL | sed -n 's/.*@\([^:]*\):.*/\1/p')
+    DB_PORT=$(echo $DB_URL | sed -n 's/.*:\([0-9]*\)\/.*/\1/p')
+    DB_NAME=$(echo $DB_URL | sed -n 's/.*\/\([^?]*\).*/\1/p')
     
-    # Optional: Set basic auth if credentials are provided
-    if [ ! -z "$PGWEB_AUTH_USER" ] && [ ! -z "$PGWEB_AUTH_PASS" ]; then
-        echo "🔒 pgweb authentication enabled"
-    fi
+    # Create pgAdmin config directory
+    mkdir -p /tmp/pgadmin
     
-    # Start pgweb on port 8081
-    /usr/local/bin/pgweb --bind=0.0.0.0 --listen=8081 &
-    PGWEB_PID=$!
+    # Set pgAdmin environment variables
+    export PGADMIN_DEFAULT_EMAIL="${PGADMIN_EMAIL:-admin@admin.com}"
+    export PGADMIN_DEFAULT_PASSWORD="${PGADMIN_PASSWORD:-admin}"
+    export PGADMIN_CONFIG_SERVER_MODE="False"
+    export PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED="False"
     
-    echo "✅ pgweb started on port 8081 (accessible at /pgweb)"
-    echo "📊 Database interface: http://localhost:8081"
+    # Create servers.json for automatic connection
+    cat > /tmp/pgadmin/servers.json << EOF
+{
+  "Servers": {
+    "1": {
+      "Name": "Chat Database",
+      "Group": "Servers",
+      "Host": "${DB_HOST}",
+      "Port": ${DB_PORT},
+      "MaintenanceDB": "${DB_NAME}",
+      "Username": "${DB_USER}",
+      "SSLMode": "disable",
+      "PassFile": "/tmp/pgadmin/.pgpass"
+    }
+  }
+}
+EOF
+    
+    # Create .pgpass file for password storage
+    echo "${DB_HOST}:${DB_PORT}:${DB_NAME}:${DB_USER}:${DB_PASS}" > /tmp/pgadmin/.pgpass
+    chmod 600 /tmp/pgadmin/.pgpass
+    
+    # Start pgAdmin on port 8081
+    python -m pgadmin4 --port 8081 &
+    PGADMIN_PID=$!
+    
+    echo "✅ pgAdmin started on port 8081"
+    echo "📊 Database UI: http://localhost:8081"
+    echo "   Email: ${PGADMIN_DEFAULT_EMAIL}"
+    echo "   Password: ${PGADMIN_DEFAULT_PASSWORD}"
 else
-    echo "⚠️  DATABASE_URL not set, pgweb will not be started"
+    echo "⚠️  DATABASE_URL not set, pgAdmin will not be started"
 fi
 
 # Start PostgREST if DATABASE_URL is set
@@ -84,7 +111,7 @@ echo "✅ FastAPI started on port 8000"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "🌐 API:       http://localhost:8000"
 if [ ! -z "$DATABASE_URL" ]; then
-    echo "🗄️  pgweb:     http://localhost:8081"
+    echo "🗄️  pgAdmin:   http://localhost:8081"
     echo "🔌 PostgREST: http://localhost:3000"
 fi
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
