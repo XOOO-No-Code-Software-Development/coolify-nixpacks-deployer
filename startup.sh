@@ -60,8 +60,9 @@ EOF
     echo "${DB_HOST}:${DB_PORT}:${DB_NAME}:${DB_USER}:${DB_PASS}" > /tmp/pgadmin/.pgpass
     chmod 600 /tmp/pgadmin/.pgpass
     
-    # Start pgAdmin on port 8081
-    python -m pgadmin4 --port 8081 &
+    # Start pgAdmin on port 8081 using gunicorn
+    cd /tmp/pgadmin
+    gunicorn --bind 0.0.0.0:8081 --workers=1 --threads=25 --chdir /opt/venv/lib/python3.11/site-packages/pgadmin4 pgAdmin4:app &
     PGADMIN_PID=$!
     
     echo "✅ pgAdmin started on port 8081"
