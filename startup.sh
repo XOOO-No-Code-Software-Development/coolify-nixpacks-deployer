@@ -26,6 +26,14 @@ if [ ! -z "$DATABASE_URL" ]; then
     DB_PORT=$(echo $DATABASE_URL | sed -n 's/.*:\([0-9]*\)\/.*/\1/p')
     DB_NAME=$(echo $DATABASE_URL | sed -n 's/.*\/\([^?]*\).*/\1/p')
     
+    # Set pgAdmin environment variables FIRST (before any initialization)
+    # These must be set before pgAdmin starts to avoid interactive prompts
+    export PGADMIN_DEFAULT_EMAIL="${PGADMIN_EMAIL:-admin@admin.com}"
+    export PGADMIN_DEFAULT_PASSWORD="${PGADMIN_PASSWORD:-admin}"
+    export PGADMIN_SERVER_JSON_FILE="/var/lib/pgadmin/servers.json"
+    export PGADMIN_LISTEN_PORT=8081
+    export PGADMIN_DISABLE_POSTFIX=1
+    
     # Create pgAdmin working directory
     mkdir -p /var/lib/pgadmin
     
@@ -63,13 +71,29 @@ EOF
     echo "${DB_HOST}:${DB_PORT}:${DB_NAME}:${DB_USER}:${DB_PASS}" > /var/lib/pgadmin/storage/.pgpass
     chmod 600 /var/lib/pgadmin/storage/.pgpass
     
-    # Set pgAdmin environment variables
-    # Based on: https://www.pgadmin.org/docs/pgadmin4/latest/container_deployment.html#environment-variables
-    export PGADMIN_DEFAULT_EMAIL="${PGADMIN_EMAIL:-admin@admin.com}"
-    export PGADMIN_DEFAULT_PASSWORD="${PGADMIN_PASSWORD:-admin}"
-    export PGADMIN_SERVER_JSON_FILE="/var/lib/pgadmin/servers.json"
-    export PGADMIN_LISTEN_PORT=8081
-    export PGADMIN_DISABLE_POSTFIX=1
+    # Create config_local.py to configure pgAdmin for non-interactive setup
+    cat > /opt/venv/lib/python3.11/site-packages/pgadmin4/config_local.py << 'PYEOF'
+# Custom configuration for containerized deployment
+import os
+
+# Server mode with non-interactive setup
+SERVER_MODE = True
+MASTER_PASSWORD_REQUIRED = False
+
+# Use environment variables for initial user setup
+DEFAULT_SERVER = '0.0.0.0'
+
+# Override paths to use /var/lib/pgadmin
+DATA_DIR = '/var/lib/pgadmin'
+LOG_FILE = '/var/lib/pgadmin/pgadmin4.log'
+SQLITE_PATH = '/var/lib/pgadmin/pgadmin4.db'
+SESSION_DB_PATH = '/var/lib/pgadmin/sessions'
+STORAGE_DIR = '/var/lib/pgadmin/storage'
+
+# Security settings
+WTF_CSRF_CHECK_DEFAULT = False
+WTF_CSRF_ENABLED = False
+PYEOF
     
     echo "📋 pgAdmin configuration:"
     echo "   Login: ${PGADMIN_DEFAULT_EMAIL}"
