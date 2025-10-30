@@ -96,8 +96,31 @@ EOF
     
     # Run pgAdmin setup to initialize database and load servers
     cd /opt/venv/lib/python3.11/site-packages/pgadmin4
-    echo "🔧 Running pgAdmin setup.py load-servers..."
-    python3 setup.py load-servers /tmp/pgadmin/servers.json 2>&1 || echo "⚠️ setup.py failed with code $?"
+    echo "🔧 Loading servers into pgAdmin..."
+    python3 -c "
+import sys
+import json
+import os
+sys.path.insert(0, '.')
+
+# Set environment for pgAdmin
+os.environ['PGADMIN_SETUP_EMAIL'] = '${PGADMIN_SETUP_EMAIL}'
+os.environ['PGADMIN_SETUP_PASSWORD'] = '${PGADMIN_SETUP_PASSWORD}'
+
+from pgadmin.setup import load_servers
+from pgadmin import create_app
+
+try:
+    app = create_app()
+    with app.app_context():
+        print('Loading servers from /tmp/pgadmin/servers.json...')
+        load_servers('/tmp/pgadmin/servers.json')
+        print('✓ Servers loaded successfully')
+except Exception as e:
+    print(f'✗ Error loading servers: {e}')
+    import traceback
+    traceback.print_exc()
+" 2>&1 || echo "⚠️ Server loading failed with code $?"
     
     # Start pgAdmin on port 8081 using gunicorn
     cd /tmp/pgadmin
