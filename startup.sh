@@ -29,14 +29,20 @@ if [ ! -z "$DATABASE_URL" ]; then
     DB_PORT=$(echo $DB_URL | sed -n 's/.*:\([0-9]*\)\/.*/\1/p')
     DB_NAME=$(echo $DB_URL | sed -n 's/.*\/\([^?]*\).*/\1/p')
     
-    # Create pgAdmin config directory
-    mkdir -p /tmp/pgadmin
+    # Create pgAdmin config and data directories
+    mkdir -p /tmp/pgadmin/data /tmp/pgadmin/sessions
     
-    # Set pgAdmin environment variables
+    # Set pgAdmin environment variables for non-interactive setup
     export PGADMIN_DEFAULT_EMAIL="${PGADMIN_EMAIL:-admin@admin.com}"
     export PGADMIN_DEFAULT_PASSWORD="${PGADMIN_PASSWORD:-admin}"
+    export PGADMIN_SETUP_EMAIL="${PGADMIN_EMAIL:-admin@admin.com}"
+    export PGADMIN_SETUP_PASSWORD="${PGADMIN_PASSWORD:-admin}"
     export PGADMIN_CONFIG_SERVER_MODE="False"
     export PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED="False"
+    export PGADMIN_CONFIG_WTF_CSRF_ENABLED="False"
+    export PGADMIN_CONFIG_DATA_DIR="/tmp/pgadmin/data"
+    export PGADMIN_CONFIG_SESSION_DB_PATH="/tmp/pgadmin/sessions"
+    export PGADMIN_CONFIG_SQLITE_PATH="/tmp/pgadmin/data/pgadmin4.db"
     
     # Create servers.json for automatic connection
     cat > /tmp/pgadmin/servers.json << EOF
@@ -59,6 +65,10 @@ EOF
     # Create .pgpass file for password storage
     echo "${DB_HOST}:${DB_PORT}:${DB_NAME}:${DB_USER}:${DB_PASS}" > /tmp/pgadmin/.pgpass
     chmod 600 /tmp/pgadmin/.pgpass
+    
+    # Initialize pgAdmin database in non-interactive mode
+    cd /opt/venv/lib/python3.11/site-packages/pgadmin4
+    python3 setup.py --load-servers /tmp/pgadmin/servers.json 2>/dev/null || true
     
     # Start pgAdmin on port 8081 using gunicorn
     cd /tmp/pgadmin
