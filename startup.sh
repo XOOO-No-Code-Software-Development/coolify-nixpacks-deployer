@@ -28,6 +28,9 @@ if [ ! -z "$DATABASE_URL" ]; then
     
     # Set pgAdmin environment variables FIRST (before any initialization)
     # These must be set before pgAdmin starts to avoid interactive prompts
+    # Use BOTH sets of variables to ensure compatibility
+    export PGADMIN_SETUP_EMAIL="${PGADMIN_EMAIL:-admin@admin.com}"
+    export PGADMIN_SETUP_PASSWORD="${PGADMIN_PASSWORD:-admin}"
     export PGADMIN_DEFAULT_EMAIL="${PGADMIN_EMAIL:-admin@admin.com}"
     export PGADMIN_DEFAULT_PASSWORD="${PGADMIN_PASSWORD:-admin}"
     export PGADMIN_SERVER_JSON_FILE="/var/lib/pgadmin/servers.json"
@@ -96,8 +99,8 @@ WTF_CSRF_ENABLED = False
 PYEOF
     
     echo "📋 pgAdmin configuration:"
-    echo "   Login: ${PGADMIN_DEFAULT_EMAIL}"
-    echo "   Password: ${PGADMIN_DEFAULT_PASSWORD}"
+    echo "   Login: ${PGADMIN_SETUP_EMAIL}"
+    echo "   Password: ${PGADMIN_SETUP_PASSWORD}"
     echo "   Server config: ${PGADMIN_SERVER_JSON_FILE}"
     echo ""
     echo "📋 Database server to be pre-loaded:"
@@ -107,7 +110,57 @@ PYEOF
     echo "   Database: ${DB_NAME}"
     echo "   User: ${DB_USER}"
     
+    # Pre-initialize the pgAdmin database to avoid interactive prompts during gunicorn startup
+    # This creates the SQLite database and runs migrations non-interactively
+    echo "🔧 Pre-initializing pgAdmin database..."
+    cd /opt/venv/lib/python3.11/site-packages/pgadmin4
+    python - <<'PYINIT'
+import os
+import sys
+
+# Set up environment
+os.environ['SERVER_MODE'] = 'True'
+
+# Import pgAdmin modules
+try:
+    from pgadmin import create_app
+    from pgadmin.model import db, User, Server, ServerGroup
+    from werkzeug.security import generate_password_hash
+    
+    print("Creating pgAdmin app...")
+    app = create_app()
+    
+    with app.app_context():
+        # Check if user already exists
+        email = os.environ.get('PGADMIN_SETUP_EMAIL', 'admin@admin.com')
+        user = User.query.filter_by(email=email).first()
+        
+        if not user:
+            print(f"Creating initial user: {email}")
+            password = os.environ.get('PGADMIN_SETUP_PASSWORD', 'admin')
+            
+            user = User(
+                email=email,
+                active=True,
+                password=generate_password_hash(password)
+            )
+            db.session.add(user)
+            db.session.commit()
+            print("✓ User created successfully")
+        else:
+            print(f"✓ User {email} already exists")
+    
+    print("✓ pgAdmin database initialized")
+    sys.exit(0)
+    
+except Exception as e:
+    print(f"✗ Initialization failed: {e}")
+    # Don't exit with error - let gunicorn try to initialize
+    sys.exit(0)
+PYINIT
+    
     # Start pgAdmin using gunicorn
+    echo "🚀 Starting pgAdmin with gunicorn..."
     cd /var/lib/pgadmin
     gunicorn --bind 0.0.0.0:8081 \
              --workers=1 \
