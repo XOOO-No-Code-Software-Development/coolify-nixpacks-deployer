@@ -75,8 +75,9 @@ EOF
     echo "${DB_HOST}:${DB_PORT}:${DB_NAME}:${DB_USER}:${DB_PASS}" > /tmp/pgadmin/.pgpass
     chmod 600 /tmp/pgadmin/.pgpass
     
-    # Set environment variable for pgAdmin to load servers
-    export PGADMIN_SERVER_JSON_FILE=/tmp/pgadmin/servers.json
+    # Run pgAdmin setup to initialize database and load servers
+    cd /opt/venv/lib/python3.11/site-packages/pgadmin4
+    python3 setup.py load-servers /tmp/pgadmin/servers.json 2>&1 | head -20 || true
     
     # Start pgAdmin on port 8081 using gunicorn
     cd /tmp/pgadmin
