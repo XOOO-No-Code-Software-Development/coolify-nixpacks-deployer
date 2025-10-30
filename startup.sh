@@ -20,105 +20,82 @@ if [ ! -z "$DATABASE_URL" ]; then
     
     # Parse DATABASE_URL to extract connection details
     # Format: postgresql://user:pass@host:port/dbname
-    DB_URL="${DATABASE_URL}"
+    DB_USER=$(echo $DATABASE_URL | sed -n 's/.*:\/\/\([^:]*\):.*@.*/\1/p')
+    DB_PASS=$(echo $DATABASE_URL | sed -n 's/.*:\/\/[^:]*:\([^@]*\)@.*/\1/p')
+    DB_HOST=$(echo $DATABASE_URL | sed -n 's/.*@\([^:]*\):.*/\1/p')
+    DB_PORT=$(echo $DATABASE_URL | sed -n 's/.*:\([0-9]*\)\/.*/\1/p')
+    DB_NAME=$(echo $DATABASE_URL | sed -n 's/.*\/\([^?]*\).*/\1/p')
     
-    # Extract database connection details
-    DB_USER=$(echo $DB_URL | sed -n 's/.*:\/\/\([^:]*\):.*@.*/\1/p')
-    DB_PASS=$(echo $DB_URL | sed -n 's/.*:\/\/[^:]*:\([^@]*\)@.*/\1/p')
-    DB_HOST=$(echo $DB_URL | sed -n 's/.*@\([^:]*\):.*/\1/p')
-    DB_PORT=$(echo $DB_URL | sed -n 's/.*:\([0-9]*\)\/.*/\1/p')
-    DB_NAME=$(echo $DB_URL | sed -n 's/.*\/\([^?]*\).*/\1/p')
+    # Create pgAdmin working directory
+    mkdir -p /var/lib/pgadmin
     
-    # Create pgAdmin config and data directories
-    mkdir -p /tmp/pgadmin/data /tmp/pgadmin/sessions /tmp/pgadmin/storage
-    
-    # Create config_local.py to override pgAdmin settings
-    cat > /opt/venv/lib/python3.11/site-packages/pgadmin4/config_local.py << PYEOF
-import os
-SERVER_MODE = True
-MASTER_PASSWORD_REQUIRED = False
-DEFAULT_SERVER = '0.0.0.0'
-DEFAULT_SERVER_PORT = 8081
-DATA_DIR = '/tmp/pgadmin/data'
-LOG_FILE = '/tmp/pgadmin/pgadmin4.log'
-SQLITE_PATH = '/tmp/pgadmin/data/pgadmin4.db'
-SESSION_DB_PATH = '/tmp/pgadmin/sessions'
-STORAGE_DIR = '/tmp/pgadmin/storage'
-WTF_CSRF_ENABLED = False
-
-# Auto-load server configuration on first login
-LOAD_SERVERS_ON_LOGIN = True
-
-# Server definitions to auto-create
-SERVERS_CONFIG = {
-    1: {
-        'Name': 'Chat Database',
-        'Group': 'Servers',
-        'Port': ${DB_PORT},
-        'Username': '${DB_USER}',
-        'Host': '${DB_HOST}',
-        'MaintenanceDB': '${DB_NAME}',
-        'SSLMode': 'disable',
-        'Password': '${DB_PASS}'
-    }
-}
-PYEOF
-    
-    # Set pgAdmin default credentials
-    export PGADMIN_SETUP_EMAIL="${PGADMIN_EMAIL:-admin@admin.com}"
-    export PGADMIN_SETUP_PASSWORD="${PGADMIN_PASSWORD:-admin}"
-    
-    # Set pgAdmin environment variables for non-interactive setup
-    export PGADMIN_SETUP_EMAIL="${PGADMIN_EMAIL:-admin@admin.com}"
-    export PGADMIN_SETUP_PASSWORD="${PGADMIN_PASSWORD:-admin}"
-    
-    # Create servers.json for automatic connection
-    cat > /tmp/pgadmin/servers.json << EOF
+    # Create servers.json for automatic server pre-loading
+    # Based on: https://www.pgadmin.org/docs/pgadmin4/latest/import_export_servers.html#json-format
+    cat > /var/lib/pgadmin/servers.json << 'EOF'
 {
   "Servers": {
     "1": {
       "Name": "Chat Database",
       "Group": "Servers",
-      "Host": "${DB_HOST}",
-      "Port": ${DB_PORT},
-      "MaintenanceDB": "${DB_NAME}",
-      "Username": "${DB_USER}",
-      "SSLMode": "disable",
-      "PassFile": "/tmp/pgadmin/.pgpass"
+      "Host": "DB_HOST_PLACEHOLDER",
+      "Port": DB_PORT_PLACEHOLDER,
+      "MaintenanceDB": "DB_NAME_PLACEHOLDER",
+      "Username": "DB_USER_PLACEHOLDER",
+      "SSLMode": "prefer",
+      "ConnectionParameters": {
+        "sslmode": "prefer",
+        "connect_timeout": 10
+      }
     }
   }
 }
 EOF
     
-    # Create .pgpass file for password storage
-    echo "${DB_HOST}:${DB_PORT}:${DB_NAME}:${DB_USER}:${DB_PASS}" > /tmp/pgadmin/.pgpass
-    chmod 600 /tmp/pgadmin/.pgpass
+    # Replace placeholders with actual values
+    sed -i "s/DB_HOST_PLACEHOLDER/${DB_HOST}/g" /var/lib/pgadmin/servers.json
+    sed -i "s/DB_PORT_PLACEHOLDER/${DB_PORT}/g" /var/lib/pgadmin/servers.json
+    sed -i "s/DB_NAME_PLACEHOLDER/${DB_NAME}/g" /var/lib/pgadmin/servers.json
+    sed -i "s/DB_USER_PLACEHOLDER/${DB_USER}/g" /var/lib/pgadmin/servers.json
     
-    echo "🔧 Initializing pgAdmin database and loading servers..."
-    echo "📋 Server configuration:"
+    # Create .pgpass file for password storage (PostgreSQL standard)
+    # Format: hostname:port:database:username:password
+    mkdir -p /var/lib/pgadmin/storage
+    echo "${DB_HOST}:${DB_PORT}:${DB_NAME}:${DB_USER}:${DB_PASS}" > /var/lib/pgadmin/storage/.pgpass
+    chmod 600 /var/lib/pgadmin/storage/.pgpass
+    
+    # Set pgAdmin environment variables
+    # Based on: https://www.pgadmin.org/docs/pgadmin4/latest/container_deployment.html#environment-variables
+    export PGADMIN_DEFAULT_EMAIL="${PGADMIN_EMAIL:-admin@admin.com}"
+    export PGADMIN_DEFAULT_PASSWORD="${PGADMIN_PASSWORD:-admin}"
+    export PGADMIN_SERVER_JSON_FILE="/var/lib/pgadmin/servers.json"
+    export PGADMIN_LISTEN_PORT=8081
+    export PGADMIN_DISABLE_POSTFIX=1
+    
+    echo "📋 pgAdmin configuration:"
+    echo "   Login: ${PGADMIN_DEFAULT_EMAIL}"
+    echo "   Password: ${PGADMIN_DEFAULT_PASSWORD}"
+    echo "   Server config: ${PGADMIN_SERVER_JSON_FILE}"
+    echo ""
+    echo "📋 Database server to be pre-loaded:"
+    echo "   Name: Chat Database"
     echo "   Host: ${DB_HOST}"
     echo "   Port: ${DB_PORT}"
     echo "   Database: ${DB_NAME}"
     echo "   User: ${DB_USER}"
     
-    # Verify servers.json exists and show its content
-    if [ -f /tmp/pgadmin/servers.json ]; then
-        echo "✓ servers.json found:"
-        cat /tmp/pgadmin/servers.json
-    else
-        echo "✗ servers.json NOT FOUND!"
-    fi
-    
-    # Start pgAdmin on port 8081 using gunicorn
-    cd /tmp/pgadmin
-    gunicorn --bind 0.0.0.0:8081 --workers=1 --threads=25 --chdir /opt/venv/lib/python3.11/site-packages/pgadmin4 pgAdmin4:app &
+    # Start pgAdmin using gunicorn
+    cd /var/lib/pgadmin
+    gunicorn --bind 0.0.0.0:8081 \
+             --workers=1 \
+             --threads=25 \
+             --timeout=60 \
+             --chdir /opt/venv/lib/python3.11/site-packages/pgadmin4 \
+             pgAdmin4:app &
     PGADMIN_PID=$!
     
     echo "✅ pgAdmin started on port 8081"
-    echo "📊 Database UI: http://localhost:8081"
-    echo "   Login: ${PGADMIN_SETUP_EMAIL}"
-    echo "   Password: ${PGADMIN_SETUP_PASSWORD}"
-    echo "   Note: Server 'Chat Database' will be auto-created on first login"
+    echo "   Access at: https://[chatid].demo.xooo.io:8081"
+    echo "   Server 'Chat Database' will be available after first login"
 else
     echo "⚠️  DATABASE_URL not set, pgAdmin will not be started"
 fi
