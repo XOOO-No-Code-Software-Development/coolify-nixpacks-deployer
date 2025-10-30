@@ -16,6 +16,6 @@ cmds = [
   "mv /tmp/postgrest /usr/local/bin/postgrest",
   "chmod +x /usr/local/bin/postgrest",
   "rm /tmp/postgrest.tar.xz",
-  "# Install pgAdmin dependencies",
-  "pip install --no-cache-dir pgadmin4==8.12"
+  "# Install pgAdmin in virtual environment",
+  ". /opt/venv/bin/activate && pip install --no-cache-dir pgadmin4==8.12"
 ]
