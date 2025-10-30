@@ -79,9 +79,25 @@ EOF
     echo "${DB_HOST}:${DB_PORT}:${DB_NAME}:${DB_USER}:${DB_PASS}" > /tmp/pgadmin/.pgpass
     chmod 600 /tmp/pgadmin/.pgpass
     
+    echo "🔧 Initializing pgAdmin database and loading servers..."
+    echo "📋 Server configuration:"
+    echo "   Host: ${DB_HOST}"
+    echo "   Port: ${DB_PORT}"
+    echo "   Database: ${DB_NAME}"
+    echo "   User: ${DB_USER}"
+    
+    # Verify servers.json exists and show its content
+    if [ -f /tmp/pgadmin/servers.json ]; then
+        echo "✓ servers.json found:"
+        cat /tmp/pgadmin/servers.json
+    else
+        echo "✗ servers.json NOT FOUND!"
+    fi
+    
     # Run pgAdmin setup to initialize database and load servers
     cd /opt/venv/lib/python3.11/site-packages/pgadmin4
-    python3 setup.py load-servers /tmp/pgadmin/servers.json 2>&1 | head -20 || true
+    echo "🔧 Running pgAdmin setup.py load-servers..."
+    python3 setup.py load-servers /tmp/pgadmin/servers.json 2>&1 || echo "⚠️ setup.py failed with code $?"
     
     # Start pgAdmin on port 8081 using gunicorn
     cd /tmp/pgadmin
