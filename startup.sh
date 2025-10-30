@@ -75,15 +75,28 @@ EOF
     
     # Initialize pgAdmin database and add server configuration
     cd /opt/venv/lib/python3.11/site-packages/pgadmin4
+    
+    # Pass database details as environment variables to Python
+    export PGADMIN_DB_HOST="${DB_HOST}"
+    export PGADMIN_DB_PORT="${DB_PORT}"
+    export PGADMIN_DB_NAME="${DB_NAME}"
+    export PGADMIN_DB_USER="${DB_USER}"
+    
     python3 << 'PYEOF'
 import sys
-import json
+import os
 sys.path.insert(0, '.')
 
 try:
     from pgadmin.setup import setup_db
     from pgadmin.model import db, Server, ServerGroup, User
     from pgadmin import create_app
+    
+    # Get database details from environment
+    db_host = os.environ.get('PGADMIN_DB_HOST')
+    db_port = int(os.environ.get('PGADMIN_DB_PORT', '5432'))
+    db_name = os.environ.get('PGADMIN_DB_NAME')
+    db_user = os.environ.get('PGADMIN_DB_USER')
     
     app = create_app()
     with app.app_context():
@@ -122,18 +135,18 @@ try:
                 user_id=user.id,
                 servergroup_id=group.id,
                 name='Chat Database',
-                host='${DB_HOST}',
-                port=${DB_PORT},
-                maintenance_db='${DB_NAME}',
-                username='${DB_USER}',
+                host=db_host,
+                port=db_port,
+                maintenance_db=db_name,
+                username=db_user,
                 ssl_mode='disable'
             )
             db.session.add(server)
             db.session.commit()
             print('✓ Server connection added successfully')
-            print('  Host: ${DB_HOST}:${DB_PORT}')
-            print('  Database: ${DB_NAME}')
-            print('  User: ${DB_USER}')
+            print(f'  Host: {db_host}:{db_port}')
+            print(f'  Database: {db_name}')
+            print(f'  User: {db_user}')
         else:
             print('✓ Server connection already exists')
 except Exception as e:
