@@ -32,17 +32,24 @@ if [ ! -z "$DATABASE_URL" ]; then
     # Create pgAdmin config and data directories
     mkdir -p /tmp/pgadmin/data /tmp/pgadmin/sessions
     
+    # Create config_local.py to override pgAdmin settings
+    cat > /opt/venv/lib/python3.11/site-packages/pgadmin4/config_local.py << 'PYEOF'
+import os
+SERVER_MODE = False
+MASTER_PASSWORD_REQUIRED = False
+DEFAULT_SERVER = '0.0.0.0'
+DEFAULT_SERVER_PORT = 8081
+DATA_DIR = '/tmp/pgadmin/data'
+LOG_FILE = '/tmp/pgadmin/pgadmin4.log'
+SQLITE_PATH = '/tmp/pgadmin/data/pgadmin4.db'
+SESSION_DB_PATH = '/tmp/pgadmin/sessions'
+STORAGE_DIR = '/tmp/pgadmin/storage'
+WTF_CSRF_ENABLED = False
+PYEOF
+    
     # Set pgAdmin environment variables for non-interactive setup
-    export PGADMIN_DEFAULT_EMAIL="${PGADMIN_EMAIL:-admin@admin.com}"
-    export PGADMIN_DEFAULT_PASSWORD="${PGADMIN_PASSWORD:-admin}"
     export PGADMIN_SETUP_EMAIL="${PGADMIN_EMAIL:-admin@admin.com}"
     export PGADMIN_SETUP_PASSWORD="${PGADMIN_PASSWORD:-admin}"
-    export PGADMIN_CONFIG_SERVER_MODE="False"
-    export PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED="False"
-    export PGADMIN_CONFIG_WTF_CSRF_ENABLED="False"
-    export PGADMIN_CONFIG_DATA_DIR="/tmp/pgadmin/data"
-    export PGADMIN_CONFIG_SESSION_DB_PATH="/tmp/pgadmin/sessions"
-    export PGADMIN_CONFIG_SQLITE_PATH="/tmp/pgadmin/data/pgadmin4.db"
     
     # Create servers.json for automatic connection
     cat > /tmp/pgadmin/servers.json << EOF
@@ -66,9 +73,22 @@ EOF
     echo "${DB_HOST}:${DB_PORT}:${DB_NAME}:${DB_USER}:${DB_PASS}" > /tmp/pgadmin/.pgpass
     chmod 600 /tmp/pgadmin/.pgpass
     
-    # Initialize pgAdmin database in non-interactive mode
+    # Initialize pgAdmin database with setup script
     cd /opt/venv/lib/python3.11/site-packages/pgadmin4
-    python3 setup.py --load-servers /tmp/pgadmin/servers.json 2>/dev/null || true
+    python3 -c "
+import sys
+sys.path.insert(0, '.')
+from pgadmin.setup import setup_db
+from pgadmin import create_app
+app = create_app()
+with app.app_context():
+    setup_db(app)
+" 2>&1 | grep -v "NOTE:" | grep -v "Enter" || true
+    
+    # Load server configuration
+    if [ -f /tmp/pgadmin/servers.json ]; then
+        python3 setup.py --load-servers /tmp/pgadmin/servers.json --user "${PGADMIN_SETUP_EMAIL}" 2>&1 | grep -v "NOTE:" | grep -v "Enter" || true
+    fi
     
     # Start pgAdmin on port 8081 using gunicorn
     cd /tmp/pgadmin
