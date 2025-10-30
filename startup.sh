@@ -75,58 +75,72 @@ EOF
     
     # Initialize pgAdmin database and add server configuration
     cd /opt/venv/lib/python3.11/site-packages/pgadmin4
-    python3 -c "
+    python3 << 'PYEOF'
 import sys
 import json
 sys.path.insert(0, '.')
-from pgadmin.setup import setup_db
-from pgadmin.model import db, Server, ServerGroup, User
-from pgadmin import create_app
 
-app = create_app()
-with app.app_context():
-    # Setup database
-    setup_db(app)
+try:
+    from pgadmin.setup import setup_db
+    from pgadmin.model import db, Server, ServerGroup, User
+    from pgadmin import create_app
     
-    # Create default user if needed (for desktop mode)
-    user = User.query.filter_by(email='${PGADMIN_SETUP_EMAIL}').first()
-    if not user:
-        user = User(
-            email='${PGADMIN_SETUP_EMAIL}',
-            active=True,
-            role=1
-        )
-        user.password = '${PGADMIN_SETUP_PASSWORD}'
-        db.session.add(user)
-        db.session.commit()
-    
-    # Add server group if not exists
-    group = ServerGroup.query.filter_by(user_id=user.id, name='Servers').first()
-    if not group:
-        group = ServerGroup(user_id=user.id, name='Servers')
-        db.session.add(group)
-        db.session.commit()
-    
-    # Add server connection
-    server = Server.query.filter_by(user_id=user.id, name='Chat Database').first()
-    if not server:
-        server = Server(
-            user_id=user.id,
-            servergroup_id=group.id,
-            name='Chat Database',
-            host='${DB_HOST}',
-            port=${DB_PORT},
-            maintenance_db='${DB_NAME}',
-            username='${DB_USER}',
-            ssl_mode='disable',
-            password='${DB_PASS}'
-        )
-        db.session.add(server)
-        db.session.commit()
-        print('✓ Server connection added successfully')
-    else:
-        print('✓ Server connection already exists')
-" 2>&1 | grep "✓" || true
+    app = create_app()
+    with app.app_context():
+        # Setup database
+        setup_db(app)
+        
+        # Create default user if needed (for desktop mode)
+        user = User.query.filter_by(email='admin@admin.com').first()
+        if not user:
+            user = User(
+                email='admin@admin.com',
+                active=True,
+                role=1
+            )
+            user.password = 'admin'
+            db.session.add(user)
+            db.session.commit()
+            print('✓ User created')
+        else:
+            print('✓ User already exists')
+        
+        # Add server group if not exists
+        group = ServerGroup.query.filter_by(user_id=user.id, name='Servers').first()
+        if not group:
+            group = ServerGroup(user_id=user.id, name='Servers')
+            db.session.add(group)
+            db.session.commit()
+            print('✓ Server group created')
+        else:
+            print('✓ Server group already exists')
+        
+        # Add server connection
+        server = Server.query.filter_by(user_id=user.id, name='Chat Database').first()
+        if not server:
+            server = Server(
+                user_id=user.id,
+                servergroup_id=group.id,
+                name='Chat Database',
+                host='${DB_HOST}',
+                port=${DB_PORT},
+                maintenance_db='${DB_NAME}',
+                username='${DB_USER}',
+                ssl_mode='disable'
+            )
+            db.session.add(server)
+            db.session.commit()
+            print('✓ Server connection added successfully')
+            print('  Host: ${DB_HOST}:${DB_PORT}')
+            print('  Database: ${DB_NAME}')
+            print('  User: ${DB_USER}')
+        else:
+            print('✓ Server connection already exists')
+except Exception as e:
+    print(f'✗ Error setting up pgAdmin: {e}')
+    import traceback
+    traceback.print_exc()
+PYEOF
     
     # Start pgAdmin on port 8081 using gunicorn
     cd /tmp/pgadmin
