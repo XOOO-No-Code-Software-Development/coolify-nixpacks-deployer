@@ -26,23 +26,17 @@ if [ ! -z "$DATABASE_URL" ]; then
     DB_PORT=$(echo $DATABASE_URL | sed -n 's/.*:\([0-9]*\)\/.*/\1/p')
     DB_NAME=$(echo $DATABASE_URL | sed -n 's/.*\/\([^?]*\).*/\1/p')
     
-    # Set pgAdmin environment variables FIRST (before any initialization)
-    # These must be set before pgAdmin starts to avoid interactive prompts
-    # Use BOTH sets of variables to ensure compatibility
+    # Set pgAdmin environment variables for non-interactive setup
     export PGADMIN_SETUP_EMAIL="${PGADMIN_EMAIL:-admin@admin.com}"
     export PGADMIN_SETUP_PASSWORD="${PGADMIN_PASSWORD:-admin}"
-    export PGADMIN_DEFAULT_EMAIL="${PGADMIN_EMAIL:-admin@admin.com}"
-    export PGADMIN_DEFAULT_PASSWORD="${PGADMIN_PASSWORD:-admin}"
-    export PGADMIN_SERVER_JSON_FILE="/var/lib/pgadmin/servers.json"
-    export PGADMIN_LISTEN_PORT=8081
-    export PGADMIN_DISABLE_POSTFIX=1
     
     # Create pgAdmin working directory
     mkdir -p /var/lib/pgadmin
     
-    # Create servers.json for automatic server pre-loading
-    # Based on: https://www.pgadmin.org/docs/pgadmin4/latest/import_export_servers.html#json-format
-    cat > /var/lib/pgadmin/servers.json << 'EOF'
+    # Create servers.json at the DEFAULT location where pgAdmin looks for it
+    # When installed via pip, pgAdmin looks for servers.json in /pgadmin4/ directory
+    mkdir -p /pgadmin4
+    cat > /pgadmin4/servers.json << 'EOF'
 {
   "Servers": {
     "1": {
@@ -63,10 +57,10 @@ if [ ! -z "$DATABASE_URL" ]; then
 EOF
     
     # Replace placeholders with actual values
-    sed -i "s/DB_HOST_PLACEHOLDER/${DB_HOST}/g" /var/lib/pgadmin/servers.json
-    sed -i "s/DB_PORT_PLACEHOLDER/${DB_PORT}/g" /var/lib/pgadmin/servers.json
-    sed -i "s/DB_NAME_PLACEHOLDER/${DB_NAME}/g" /var/lib/pgadmin/servers.json
-    sed -i "s/DB_USER_PLACEHOLDER/${DB_USER}/g" /var/lib/pgadmin/servers.json
+    sed -i "s/DB_HOST_PLACEHOLDER/${DB_HOST}/g" /pgadmin4/servers.json
+    sed -i "s/DB_PORT_PLACEHOLDER/${DB_PORT}/g" /pgadmin4/servers.json
+    sed -i "s/DB_NAME_PLACEHOLDER/${DB_NAME}/g" /pgadmin4/servers.json
+    sed -i "s/DB_USER_PLACEHOLDER/${DB_USER}/g" /pgadmin4/servers.json
     
     # Create .pgpass file for password storage (PostgreSQL standard)
     # Format: hostname:port:database:username:password
@@ -74,17 +68,14 @@ EOF
     echo "${DB_HOST}:${DB_PORT}:${DB_NAME}:${DB_USER}:${DB_PASS}" > /var/lib/pgadmin/storage/.pgpass
     chmod 600 /var/lib/pgadmin/storage/.pgpass
     
-    # Create config_local.py to configure pgAdmin for non-interactive setup
+    # Create config_local.py to configure pgAdmin for non-interactive pip installation
     cat > /opt/venv/lib/python3.11/site-packages/pgadmin4/config_local.py << 'PYEOF'
-# Custom configuration for containerized deployment
+# Custom configuration for pip-based installation
 import os
 
 # Server mode with non-interactive setup
 SERVER_MODE = True
 MASTER_PASSWORD_REQUIRED = False
-
-# Use environment variables for initial user setup
-DEFAULT_SERVER = '0.0.0.0'
 
 # Override paths to use /var/lib/pgadmin
 DATA_DIR = '/var/lib/pgadmin'
@@ -101,7 +92,7 @@ PYEOF
     echo "📋 pgAdmin configuration:"
     echo "   Login: ${PGADMIN_SETUP_EMAIL}"
     echo "   Password: ${PGADMIN_SETUP_PASSWORD}"
-    echo "   Server config: ${PGADMIN_SERVER_JSON_FILE}"
+    echo "   Servers file: /pgadmin4/servers.json"
     echo ""
     echo "📋 Database server to be pre-loaded:"
     echo "   Name: Chat Database"
