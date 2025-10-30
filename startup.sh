@@ -73,22 +73,60 @@ EOF
     echo "${DB_HOST}:${DB_PORT}:${DB_NAME}:${DB_USER}:${DB_PASS}" > /tmp/pgadmin/.pgpass
     chmod 600 /tmp/pgadmin/.pgpass
     
-    # Initialize pgAdmin database with setup script
+    # Initialize pgAdmin database and add server configuration
     cd /opt/venv/lib/python3.11/site-packages/pgadmin4
     python3 -c "
 import sys
+import json
 sys.path.insert(0, '.')
 from pgadmin.setup import setup_db
+from pgadmin.model import db, Server, ServerGroup, User
 from pgadmin import create_app
+
 app = create_app()
 with app.app_context():
+    # Setup database
     setup_db(app)
-" 2>&1 | grep -v "NOTE:" | grep -v "Enter" || true
     
-    # Load server configuration
-    if [ -f /tmp/pgadmin/servers.json ]; then
-        python3 setup.py --load-servers /tmp/pgadmin/servers.json --user "${PGADMIN_SETUP_EMAIL}" 2>&1 | grep -v "NOTE:" | grep -v "Enter" || true
-    fi
+    # Create default user if needed (for desktop mode)
+    user = User.query.filter_by(email='${PGADMIN_SETUP_EMAIL}').first()
+    if not user:
+        user = User(
+            email='${PGADMIN_SETUP_EMAIL}',
+            active=True,
+            role=1
+        )
+        user.password = '${PGADMIN_SETUP_PASSWORD}'
+        db.session.add(user)
+        db.session.commit()
+    
+    # Add server group if not exists
+    group = ServerGroup.query.filter_by(user_id=user.id, name='Servers').first()
+    if not group:
+        group = ServerGroup(user_id=user.id, name='Servers')
+        db.session.add(group)
+        db.session.commit()
+    
+    # Add server connection
+    server = Server.query.filter_by(user_id=user.id, name='Chat Database').first()
+    if not server:
+        server = Server(
+            user_id=user.id,
+            servergroup_id=group.id,
+            name='Chat Database',
+            host='${DB_HOST}',
+            port=${DB_PORT},
+            maintenance_db='${DB_NAME}',
+            username='${DB_USER}',
+            ssl_mode='disable',
+            password='${DB_PASS}'
+        )
+        db.session.add(server)
+        db.session.commit()
+        print('✓ Server connection added successfully')
+    else:
+        print('✓ Server connection already exists')
+" 2>&1 | grep "✓" || true
     
     # Start pgAdmin on port 8081 using gunicorn
     cd /tmp/pgadmin
