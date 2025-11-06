@@ -47,7 +47,7 @@ echo "✅ All required files found"
 echo ""
 
 # Check if image already exists
-if docker images --format "{{.Repository}}:{{.Tag}}" | grep -q "^${FULL_IMAGE_NAME}$"; then
+if sudo docker images --format "{{.Repository}}:{{.Tag}}" | grep -q "^${FULL_IMAGE_NAME}$"; then
     echo "⚠️  Image ${FULL_IMAGE_NAME} already exists"
     echo ""
     read -p "Do you want to rebuild it? (y/N): " -n 1 -r
@@ -63,7 +63,7 @@ echo "🔨 Starting build process..."
 echo ""
 
 # Build the image
-docker build \
+sudo docker build \
     --progress=plain \
     --tag "${FULL_IMAGE_NAME}" \
     --file "${BUILD_DIR}/Dockerfile" \
@@ -77,12 +77,12 @@ echo ""
 
 # Show image details
 echo "📊 Image details:"
-docker images "${IMAGE_NAME}" --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}\t{{.CreatedAt}}"
+sudo docker images "${IMAGE_NAME}" --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}\t{{.CreatedAt}}"
 echo ""
 
 # Verify the image
 echo "🔍 Verifying image..."
-if docker run --rm "${FULL_IMAGE_NAME}" "python --version && pip list | head -n 20 && postgrest --version"; then
+if sudo docker run --rm "${FULL_IMAGE_NAME}" "python --version && pip list | head -n 20 && postgrest --version"; then
     echo ""
     echo "✅ Image verification successful!"
 else
