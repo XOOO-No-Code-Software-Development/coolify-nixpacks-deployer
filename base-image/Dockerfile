@@ -64,8 +64,8 @@ RUN . /opt/venv/bin/activate && \
 RUN wget -O /tmp/postgrest.tar.xz \
         https://github.com/PostgREST/postgrest/releases/download/v12.2.3/postgrest-v12.2.3-linux-static-x64.tar.xz && \
     tar -xJf /tmp/postgrest.tar.xz -C /tmp && \
-    mv /tmp/postgrest /usr/local/bin/postgrest && \
-    chmod +x /usr/local/bin/postgrest && \
+    sudo mv /tmp/postgrest /usr/local/bin/postgrest && \
+    sudo chmod +x /usr/local/bin/postgrest && \
     rm /tmp/postgrest.tar.xz
 
 # ============================================
@@ -75,7 +75,7 @@ RUN . /opt/venv/bin/activate && \
     python --version && \
     pip --version && \
     pip list && \
-    postgrest --version && \
+    /usr/local/bin/postgrest --version && \
     echo "✅ Base image built successfully!"
 
 # Set entrypoint back to bash
