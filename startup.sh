@@ -34,8 +34,8 @@ server-host = "0.0.0.0"
 server-port = 3000
 EOF
     
-    # Start PostgREST on port 3000
-    /usr/local/bin/postgrest /tmp/postgrest.conf &
+    # Start PostgREST on port 3000 (redirect stderr to stdout)
+    /usr/local/bin/postgrest /tmp/postgrest.conf 2>&1 &
     POSTGREST_PID=$!
     
     echo "✅ PostgREST started on port 3000"
@@ -44,9 +44,9 @@ else
     echo "⚠️  DATABASE_URL not set, PostgREST will not be started"
 fi
 
-# Start the FastAPI application
+# Start the FastAPI application (redirect stderr to stdout)
 echo "🚀 Starting FastAPI application..."
-uvicorn main:app --host 0.0.0.0 --port 8000 &
+uvicorn main:app --host 0.0.0.0 --port 8000 2>&1 &
 UVICORN_PID=$!
 
 echo "✅ FastAPI started on port 8000"
