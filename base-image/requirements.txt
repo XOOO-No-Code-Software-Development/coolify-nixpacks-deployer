@@ -1,0 +1,15 @@
+# Base Image Python Requirements
+# These dependencies are pre-installed in the base image
+# Locked versions from deployment logs
+
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+websockets==13.1
+asyncpg==0.30.0
+pydantic==2.10.0
+python-dotenv==1.0.1
+
+# Additional dependencies that are commonly needed
+httptools==0.7.1
+uvloop==0.22.1
+watchfiles==1.1.1

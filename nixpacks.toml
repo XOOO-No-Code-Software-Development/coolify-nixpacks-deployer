@@ -1,19 +1,24 @@
-providers = ["python"]
+# XOOO Backend Deployment Configuration
+# Uses pre-built base image with Python, dependencies, and PostgREST
+
+providers = []
+
+# Use our custom base image with everything pre-installed
+buildImage = "xooo-backend-base:latest"
 
 [phases.setup]
-nixPkgs = ["curl", "jq", "python311", "python311Packages.pip", "wget"]
+# Base image already has all nix packages, so we skip this phase
+nixPkgs = []
 
 [phases.install]
 cmds = [
+  # Download source code from v0 API
   "bash download-source.sh",
-  "python -m venv /opt/venv",
-  ". /opt/venv/bin/activate && pip install uvicorn",
-  ". /opt/venv/bin/activate && if [ -f requirements.txt ]; then pip install -r requirements.txt; fi",
+  
+  # Install any NEW dependencies not in base image (if requirements.txt changed)
+  # This will be very fast since most deps are already installed
+  ". /opt/venv/bin/activate && if [ -f requirements.txt ]; then pip install --no-deps -r requirements.txt 2>/dev/null || true; fi",
+  
+  # Validate the application
   ". /opt/venv/bin/activate && python -c 'import main; app = main.app; print(\"✅ Application validation successful\")'",
-  "# Install PostgREST",
-  "wget -O /tmp/postgrest.tar.xz https://github.com/PostgREST/postgrest/releases/download/v12.2.3/postgrest-v12.2.3-linux-static-x64.tar.xz",
-  "tar -xJf /tmp/postgrest.tar.xz -C /tmp",
-  "mv /tmp/postgrest /usr/local/bin/postgrest",
-  "chmod +x /usr/local/bin/postgrest",
-  "rm /tmp/postgrest.tar.xz"
 ]
