@@ -8,20 +8,23 @@ providers = ["python"]
 buildImage = "xooo-backend-base:latest"
 
 [phases.setup]
-# Base image already has all nix packages and system tools
-# Skip ALL setup to avoid re-downloading
+# Base image already has everything - skip ALL setup operations
+# This prevents nixpacks from running apt-get update and downloading package lists
 nixPkgs = []
 nixLibs = []
 aptPkgs = []
+# Add a noop command to prevent provider defaults from being added
+cmds = ["echo 'Using pre-built base image, skipping setup'"]
 
 [phases.install]
 cmds = [
   # Download source code from v0 API
   "bash download-source.sh",
   
-  # Install any NEW dependencies not in base image (if requirements.txt changed)
-  # This will be very fast since most deps are already installed
-  ". /opt/venv/bin/activate && if [ -f requirements.txt ]; then pip install --no-deps -r requirements.txt 2>/dev/null || true; fi",
+  # Install dependencies from requirements.txt
+  # pip will be smart: already installed packages are skipped, new ones are installed
+  # This maintains full flexibility for new dependencies while being fast for existing ones
+  ". /opt/venv/bin/activate && if [ -f requirements.txt ]; then pip install -r requirements.txt; fi",
   
   # Validate the application
   ". /opt/venv/bin/activate && python -c 'import main; app = main.app; print(\"✅ Application validation successful\")'",
