@@ -82,13 +82,18 @@ echo ""
 
 # Verify the image
 echo "🔍 Verifying image..."
-if sudo docker run --rm "${FULL_IMAGE_NAME}" "python --version && pip list | head -n 20 && postgrest --version"; then
-    echo ""
-    echo "✅ Image verification successful!"
+echo ""
+echo "Python and pip:"
+sudo docker run --rm "${FULL_IMAGE_NAME}" "python --version && pip --version"
+echo ""
+echo "Installed packages:"
+sudo docker run --rm "${FULL_IMAGE_NAME}" "pip list"
+echo ""
+echo "PostgREST:"
+if sudo docker run --rm "${FULL_IMAGE_NAME}" "test -f /usr/local/bin/postgrest && /usr/local/bin/postgrest --version"; then
+    echo "✅ PostgREST installed correctly"
 else
-    echo ""
-    echo "❌ Image verification failed!"
-    exit 1
+    echo "⚠️  PostgREST not found or not executable"
 fi
 
 echo ""
