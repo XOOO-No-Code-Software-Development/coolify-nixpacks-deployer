@@ -8,8 +8,11 @@ providers = ["python"]
 buildImage = "xooo-backend-base:latest"
 
 [phases.setup]
-# Base image already has all nix packages, so we skip this phase
+# Base image already has all nix packages and system tools
+# Skip ALL setup to avoid re-downloading
 nixPkgs = []
+nixLibs = []
+aptPkgs = []
 
 [phases.install]
 cmds = [
