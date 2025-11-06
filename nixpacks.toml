@@ -1,7 +1,8 @@
 # XOOO Backend Deployment Configuration
 # Uses pre-built base image with Python, dependencies, and PostgREST
 
-providers = []
+# Keep Python provider so nixpacks can detect the app type
+providers = ["python"]
 
 # Use our custom base image with everything pre-installed
 buildImage = "xooo-backend-base:latest"
