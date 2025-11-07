@@ -53,7 +53,10 @@ ENV PYTHONUNBUFFERED=1 \
 # ============================================
 # LAYER 4: Create Python virtual environment
 # ============================================
-RUN python -m venv /opt/venv
+RUN python3.11 -m venv /opt/venv
+
+# Create activation script that includes library path
+RUN echo 'export LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH' >> /opt/venv/bin/activate
 
 # ============================================
 # LAYER 5: Install Python dependencies
