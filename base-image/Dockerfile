@@ -30,9 +30,11 @@ RUN sudo apt-get update && \
         wget \
         ca-certificates \
         g++ \
-        libstdc++6 && \
+        libstdc++6 \
+        build-essential && \
     sudo apt-get clean && \
-    sudo rm -rf /var/lib/apt/lists/*
+    sudo rm -rf /var/lib/apt/lists/* && \
+    sudo ldconfig
 
 # ============================================
 # LAYER 3: Set Python environment variables
