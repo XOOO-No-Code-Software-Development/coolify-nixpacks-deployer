@@ -22,13 +22,15 @@ RUN nix-env -if /tmp/nixpkgs-config.nix && \
     rm /tmp/nixpkgs-config.nix
 
 # ============================================
-# LAYER 2: Install system packages (curl, wget)
+# LAYER 2: Install system packages (curl, wget, g++, libstdc++6)
 # ============================================
 RUN sudo apt-get update && \
     sudo apt-get install -y --no-install-recommends \
         curl \
         wget \
-        ca-certificates && \
+        ca-certificates \
+        g++ \
+        libstdc++6 && \
     sudo apt-get clean && \
     sudo rm -rf /var/lib/apt/lists/*
 
