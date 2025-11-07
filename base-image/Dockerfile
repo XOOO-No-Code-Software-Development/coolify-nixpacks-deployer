@@ -90,6 +90,9 @@ RUN . /opt/venv/bin/activate && \
     ls -la /usr/lib/x86_64-linux-gnu/libstdc++* && \
     ldconfig -p | grep libstdc++ && \
     echo "" && \
+    echo "Checking greenlet binary dependencies:" && \
+    find /opt/venv -name "_greenlet*.so" -exec ldd {} \; && \
+    echo "" && \
     echo "Testing greenlet import:" && \
     python -c "import greenlet; print('Greenlet version:', greenlet.__version__)"
 
