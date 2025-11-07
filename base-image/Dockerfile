@@ -22,9 +22,13 @@ RUN nix-env -if /tmp/nixpkgs-config.nix && \
     rm /tmp/nixpkgs-config.nix
 
 # ============================================
-# LAYER 2: Install system packages (curl, wget, g++, libstdc++6, Python 3.11)
+# LAYER 2: Install system packages and add deadsnakes PPA for Python 3.11
 # ============================================
 RUN sudo apt-get update && \
+    sudo apt-get install -y --no-install-recommends \
+        software-properties-common && \
+    sudo add-apt-repository ppa:deadsnakes/ppa -y && \
+    sudo apt-get update && \
     sudo apt-get install -y --no-install-recommends \
         curl \
         wget \
