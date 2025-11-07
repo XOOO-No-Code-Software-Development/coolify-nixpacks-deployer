@@ -22,7 +22,7 @@ RUN nix-env -if /tmp/nixpkgs-config.nix && \
     rm /tmp/nixpkgs-config.nix
 
 # ============================================
-# LAYER 2: Install system packages (curl, wget, g++, libstdc++6)
+# LAYER 2: Install system packages (curl, wget, g++, libstdc++6, Python 3.11)
 # ============================================
 RUN sudo apt-get update && \
     sudo apt-get install -y --no-install-recommends \
@@ -34,7 +34,11 @@ RUN sudo apt-get update && \
         libstdc++6 \
         libgcc-s1 \
         libc6 \
-        build-essential && \
+        build-essential \
+        python3.11 \
+        python3.11-venv \
+        python3.11-dev \
+        python3-pip && \
     sudo apt-get clean && \
     sudo rm -rf /var/lib/apt/lists/* && \
     sudo ldconfig
@@ -51,9 +55,9 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_DEFAULT_TIMEOUT=100
 
 # ============================================
-# LAYER 4: Create Python virtual environment
+# LAYER 4: Create Python virtual environment (using system Python)
 # ============================================
-RUN python3.11 -m venv /opt/venv
+RUN /usr/bin/python3.11 -m venv /opt/venv
 
 # ============================================
 # LAYER 5: Install Python dependencies
