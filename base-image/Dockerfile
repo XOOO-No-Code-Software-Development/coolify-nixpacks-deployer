@@ -37,9 +37,6 @@ RUN sudo apt-get update && \
     sudo apt-get clean && \
     sudo rm -rf /var/lib/apt/lists/*
 
-# Configure library paths for proper linking
-ENV LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH
-
 # ============================================
 # LAYER 3: Set Python environment variables
 # ============================================
@@ -94,3 +91,6 @@ WORKDIR /app/
 
 # Add activation to bash profile so venv is always active
 RUN echo 'source /opt/venv/bin/activate' >> /root/.bashrc
+
+# Set library path for runtime (after all builds are done)
+ENV LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH
