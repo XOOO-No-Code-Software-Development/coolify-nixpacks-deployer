@@ -55,9 +55,6 @@ ENV PYTHONUNBUFFERED=1 \
 # ============================================
 RUN python3.11 -m venv /opt/venv
 
-# Create activation script that includes library path
-RUN echo 'export LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH' >> /opt/venv/bin/activate
-
 # ============================================
 # LAYER 5: Install Python dependencies
 # ============================================
@@ -65,6 +62,7 @@ COPY base-image/requirements.txt /tmp/requirements.txt
 
 RUN . /opt/venv/bin/activate && \
     pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir --no-binary greenlet greenlet==3.0.3 && \
     pip install --no-cache-dir -r /tmp/requirements.txt && \
     rm /tmp/requirements.txt
 
