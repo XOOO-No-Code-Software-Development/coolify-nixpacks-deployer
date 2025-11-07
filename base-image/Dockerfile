@@ -30,11 +30,15 @@ RUN sudo apt-get update && \
         wget \
         ca-certificates \
         g++ \
+        gcc \
         libstdc++6 \
+        libgcc-s1 \
         build-essential && \
     sudo apt-get clean && \
-    sudo rm -rf /var/lib/apt/lists/* && \
-    sudo ldconfig
+    sudo rm -rf /var/lib/apt/lists/*
+
+# Configure library paths for proper linking
+ENV LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH
 
 # ============================================
 # LAYER 3: Set Python environment variables
