@@ -83,7 +83,14 @@ RUN . /opt/venv/bin/activate && \
     pip --version && \
     pip list && \
     /usr/local/bin/postgrest --version && \
-    echo "✅ Base image built successfully!"
+    echo "✅ Base image built successfully!" && \
+    echo "" && \
+    echo "Checking libstdc++.so.6:" && \
+    ls -la /usr/lib/x86_64-linux-gnu/libstdc++* && \
+    ldconfig -p | grep libstdc++ && \
+    echo "" && \
+    echo "Testing greenlet import:" && \
+    python -c "import greenlet; print('Greenlet version:', greenlet.__version__)"
 
 # Set entrypoint back to bash
 ENTRYPOINT ["/bin/bash", "-l", "-c"]
