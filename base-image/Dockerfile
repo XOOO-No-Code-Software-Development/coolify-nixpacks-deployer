@@ -8,6 +8,11 @@ LABEL org.opencontainers.image.source="https://github.com/XOOO-No-Code-Software-
 LABEL org.opencontainers.image.description="XOOO Backend Base Image with Python 3.11, FastAPI, and PostgREST"
 LABEL org.opencontainers.image.version="1.0.0"
 
+# Prevent Docker cleanup from removing this base image
+LABEL io.coolify.preserve="true"
+LABEL io.xooo.type="base-image"
+LABEL io.xooo.keep="always"
+
 # Set shell options for better error handling
 SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
 

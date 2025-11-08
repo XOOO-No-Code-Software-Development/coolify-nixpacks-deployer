@@ -101,6 +101,17 @@ echo "======================================"
 echo "🎉 Base image is ready to use!"
 echo "======================================"
 echo ""
+
+# Create a dummy container to keep the image from being pruned
+echo "🔒 Creating protection container to prevent cleanup..."
+if sudo docker ps -a --format '{{.Names}}' | grep -q '^xooo-base-keeper$'; then
+    echo "   Protection container already exists"
+else
+    sudo docker create --name xooo-base-keeper "${FULL_IMAGE_NAME}" echo "keeper"
+    echo "   ✅ Protection container created"
+fi
+echo ""
+
 echo "Next steps:"
 echo "1. Update nixpacks.toml to use this base image"
 echo "2. Deploy your application - it will use the base image automatically"
