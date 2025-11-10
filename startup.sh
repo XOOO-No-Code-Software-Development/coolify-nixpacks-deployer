@@ -53,38 +53,9 @@ echo "✅ FastAPI started on port 8000"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "🌐 API:       http://localhost:8000"
 if [ ! -z "$DATABASE_URL" ]; then
-    echo "📊 PostgREST: http://localhost:3000"
+    echo " PostgREST: http://localhost:3000"
 fi
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-# Monitor background processes and exit with their exit code if they fail
-while true; do
-    # Check if uvicorn is still running
-    if ! kill -0 $UVICORN_PID 2>/dev/null; then
-        wait $UVICORN_PID
-        UVICORN_EXIT=$?
-        echo "❌ FastAPI application exited with code $UVICORN_EXIT"
-        
-        # Kill PostgREST if it's running
-        if [ ! -z "$POSTGREST_PID" ]; then
-            kill $POSTGREST_PID 2>/dev/null
-        fi
-        
-        exit $UVICORN_EXIT
-    fi
-    
-    # Check if PostgREST is still running (only if it was started)
-    if [ ! -z "$POSTGREST_PID" ] && ! kill -0 $POSTGREST_PID 2>/dev/null; then
-        wait $POSTGREST_PID
-        POSTGREST_EXIT=$?
-        echo "❌ PostgREST exited with code $POSTGREST_EXIT"
-        
-        # Kill uvicorn
-        kill $UVICORN_PID 2>/dev/null
-        
-        exit $POSTGREST_EXIT
-    fi
-    
-    # Sleep briefly before checking again
-    sleep 1
-done
+# Wait for all background processes
+wait
