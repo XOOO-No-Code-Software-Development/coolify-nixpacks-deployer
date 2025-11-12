@@ -52,14 +52,11 @@ fi
 V0_API_URL="${V0_API_URL:-https://api.v0.dev/v1}"
 echo "🌐 API URL: $V0_API_URL"
 
-# Remove default backend folder before fetching new content
-echo "🧹 Removing default backend folder..."
-rm -rf backend
-
-# Clean current directory (except this script and .git)
+# Clean current directory (except this script, backend template, and .git)
 echo "🧹 Cleaning workspace..."
 find . -mindepth 1 -maxdepth 1 \
   ! -name 'download-source.sh' \
+  ! -name 'backend' \
   ! -name '.git' \
   ! -name '.gitignore' \
   ! -name 'README.md' \
@@ -101,24 +98,48 @@ if command -v jq &> /dev/null; then
   BACKEND_FILE_COUNT=$(echo "$VERSION_RESPONSE" | jq '[.files[] | select(.name | startswith("backend/"))] | length')
   echo "📊 Found $BACKEND_FILE_COUNT backend files (filtering out non-backend files)"
   
-  # Extract only backend files
-  echo "$VERSION_RESPONSE" | jq -r '.files[] | select(.name | startswith("backend/")) | @json' | while IFS= read -r file; do
-    filename=$(echo "$file" | jq -r '.name')
-    content=$(echo "$file" | jq -r '.content')
+  # Check if we have backend files
+  if [ "$BACKEND_FILE_COUNT" -eq 0 ]; then
+    echo "⚠️  No backend files found in version"
+    echo "🎯 Using default backend template instead"
     
-    # Remove 'backend/' prefix to flatten the structure
-    target_filename="${filename#backend/}"
-    
-    # Create directory if needed
-    filedir=$(dirname "$target_filename")
-    if [ "$filedir" != "." ]; then
-      mkdir -p "$filedir"
+    # Move template files from backend/ to root
+    if [ -d "backend" ]; then
+      echo "📂 Moving backend template files to root directory..."
+      find backend -name ".DS_Store" -delete
+      mv backend/* .
+      rm -rf backend
+      echo "✅ Template files moved to root"
+    else
+      echo "❌ ERROR: No backend template directory found"
+      exit 1
+    fi
+  else
+    # Remove template backend folder since we have backend files in version
+    if [ -d "backend" ]; then
+      echo "🗑️  Removing backend template (using version files instead)"
+      rm -rf backend
     fi
     
-    # Write file content
-    echo "$content" > "$target_filename"
-    echo "✅ Created: $target_filename"
-  done
+    # Extract backend files from version
+    echo "$VERSION_RESPONSE" | jq -r '.files[] | select(.name | startswith("backend/")) | @json' | while IFS= read -r file; do
+      filename=$(echo "$file" | jq -r '.name')
+      content=$(echo "$file" | jq -r '.content')
+      
+      # Remove 'backend/' prefix to flatten the structure
+      target_filename="${filename#backend/}"
+      
+      # Create directory if needed
+      filedir=$(dirname "$target_filename")
+      if [ "$filedir" != "." ]; then
+        mkdir -p "$filedir"
+      fi
+      
+      # Write file content
+      echo "$content" > "$target_filename"
+      echo "✅ Created: $target_filename"
+    done
+  fi
 else
   echo "📂 Extracting files using grep/sed (jq not available)..."
   
