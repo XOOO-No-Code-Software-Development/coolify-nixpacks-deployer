@@ -48,6 +48,13 @@ class ReloadHandler(BaseHTTPRequestHandler):
                 cwd=os.path.dirname(os.path.abspath(__file__))
             )
             
+            # Print download progress
+            if result.stdout:
+                print(f"[Reload Service] 📄 Download output:")
+                for line in result.stdout.split('\n'):
+                    if line.strip():
+                        print(f"[Reload Service]   {line}")
+            
             response = {
                 "success": result.returncode == 0,
                 "chatId": chat_id,
@@ -136,6 +143,7 @@ class ReloadHandler(BaseHTTPRequestHandler):
             
             version_id = latest_version['id']
             print(f"[Reload Service] ✅ Found latest version: {version_id}")
+            print(f"[Reload Service] 📥 Downloading version files...")
             
             # Execute reload script
             result = subprocess.run(
@@ -145,6 +153,13 @@ class ReloadHandler(BaseHTTPRequestHandler):
                 timeout=60,
                 cwd=os.path.dirname(os.path.abspath(__file__))
             )
+            
+            # Print download progress
+            if result.stdout:
+                print(f"[Reload Service] 📄 Download output:")
+                for line in result.stdout.split('\n'):
+                    if line.strip():
+                        print(f"[Reload Service]   {line}")
             
             response_data = {
                 "success": result.returncode == 0,
