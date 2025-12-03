@@ -111,8 +111,9 @@ else
 fi
 
 # Restart uvicorn in the background (don't wait for it)
+# Redirect to container's main stdout/stderr to avoid [HOTRELOAD] prefix
 source /opt/venv/bin/activate
-bash start-backend.sh &
+bash start-backend.sh > /proc/1/fd/1 2>&1 &
 disown
 NEW_UVICORN_PID=$!
 echo "✅ Uvicorn restarted (new PID: $NEW_UVICORN_PID)"
