@@ -22,7 +22,7 @@ fi
 
 # Start System Reload Service (port 9000) - INDEPENDENT OF USER CODE
 echo "🔧 Starting System Reload Service on port 9000..."
-python3 reload-service.py 2>&1 &
+python3 reload-service.py 2>&1 | while IFS= read -r line; do echo "[HOTRELOAD] $line"; done &
 RELOAD_SERVICE_PID=$!
 echo "✅ Reload Service started (PID: $RELOAD_SERVICE_PID)"
 
@@ -46,8 +46,8 @@ server-host = "0.0.0.0"
 server-port = 3000
 PGCONF
     
-    # Start PostgREST on port 3000 (redirect stderr to stdout)
-    /usr/local/bin/postgrest /tmp/postgrest.conf 2>&1 &
+    # Start PostgREST on port 3000 with log prefix
+    /usr/local/bin/postgrest /tmp/postgrest.conf 2>&1 | while IFS= read -r line; do echo "[POSTGREST] $line"; done &
     POSTGREST_PID=$!
     
     echo "✅ PostgREST started on port 3000"
@@ -63,10 +63,7 @@ fi
 # - Gives us full control over when reload happens
 # - Reload is triggered by platform via HTTP call to port 9000
 echo "🚀 Starting User's FastAPI application..."
-uvicorn main:app \
-  --host 0.0.0.0 \
-  --port 8000 \
-  --log-level info 2>&1 &
+bash start-backend.sh &
 UVICORN_PID=$!
 
 echo "✅ User's Backend started on port 8000"
@@ -78,6 +75,11 @@ if [ ! -z "$DATABASE_URL" ]; then
 fi
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "ℹ️  Hot reload: Managed by reload service on port 9000"
+echo ""
+echo "📋 Log Filters Available:"
+echo "   - [HOTRELOAD] - Reload service logs"
+echo "   - [POSTGREST] - Database REST API logs"
+echo "   - [BACKEND]   - User's FastAPI application logs"
 
 # Wait for all background processes
 wait

@@ -112,7 +112,7 @@ fi
 
 # Restart uvicorn in the background (don't wait for it)
 source /opt/venv/bin/activate
-nohup uvicorn main:app --host 0.0.0.0 --port 8000 --log-level info > /tmp/uvicorn.log 2>&1 &
+nohup bash start-backend.sh > /tmp/uvicorn.log 2>&1 &
 NEW_UVICORN_PID=$!
 echo "✅ Uvicorn restarted (new PID: $NEW_UVICORN_PID)"
 
