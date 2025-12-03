@@ -87,6 +87,16 @@ echo "📋 Updated files:"
 ls -la *.py 2>/dev/null || echo "No Python files found"
 echo ""
 
+# Install/update Python packages if requirements.txt exists
+if [ -f "requirements.txt" ]; then
+  echo "📦 Installing Python packages..."
+  source /opt/venv/bin/activate
+  pip install -q -r requirements.txt
+  echo "✅ Packages installed"
+else
+  echo "ℹ️  No requirements.txt found, skipping package installation"
+fi
+echo ""
 # Restart uvicorn to apply changes
 echo "🔄 Restarting FastAPI application..."
 
