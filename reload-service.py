@@ -11,7 +11,6 @@ import json
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 
-RELOAD_SECRET = os.getenv("RELOAD_SECRET", "")
 PORT = 9000
 
 class ReloadHandler(BaseHTTPRequestHandler):
@@ -25,12 +24,6 @@ class ReloadHandler(BaseHTTPRequestHandler):
         
         if parsed_path.path != '/reload':
             self.send_error(404, "Not Found")
-            return
-        
-        # Check authorization
-        auth_header = self.headers.get('Authorization', '')
-        if not auth_header or auth_header != f"Bearer {RELOAD_SECRET}":
-            self.send_error(401, "Unauthorized")
             return
         
         # Parse query parameters
@@ -90,16 +83,18 @@ class ReloadHandler(BaseHTTPRequestHandler):
         else:
             self.send_error(404, "Not Found")
 
-if __name__ == '__main__':
-    if not RELOAD_SECRET:
-        print("[Reload Service] ⚠️  WARNING: RELOAD_SECRET not set!")
-    
+def run_server():
+    """Start the reload service"""
     server = HTTPServer(('0.0.0.0', PORT), ReloadHandler)
     print(f"[Reload Service] 🚀 Starting on port {PORT}")
-    print(f"[Reload Service] 🔒 Authorization: {'Enabled' if RELOAD_SECRET else 'DISABLED'}")
+    print(f"[Reload Service] 📡 Endpoint: POST /reload?chatId=X&versionId=Y")
+    print(f"[Reload Service] 💚 Health check: GET /health")
     
     try:
         server.serve_forever()
     except KeyboardInterrupt:
-        print("[Reload Service] 🛑 Shutting down...")
+        print(f"[Reload Service] 🛑 Shutting down...")
         server.shutdown()
+
+if __name__ == '__main__':
+    run_server()
