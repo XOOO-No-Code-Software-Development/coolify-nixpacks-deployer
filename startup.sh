@@ -56,15 +56,14 @@ else
     echo "⚠️  DATABASE_URL not set, PostgREST will not be started"
 fi
 
-# Start User's FastAPI application with hot reload using polling
-# Use --reload-dir to limit watching to specific directories
-# Use --reload-delay to add small delay before reload
+# Start User's FastAPI application with hot reload
+# Include only *.py files to avoid watching too many files
 echo "🚀 Starting User's FastAPI application with hot reload..."
 uvicorn main:app \
   --host 0.0.0.0 \
   --port 8000 \
   --reload \
-  --reload-dir /app/backend \
+  --reload-include "*.py" \
   --reload-delay 2 \
   --log-level info 2>&1 &
 UVICORN_PID=$!
