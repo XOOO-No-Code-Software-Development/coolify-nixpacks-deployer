@@ -89,34 +89,29 @@ echo ""
 
 # Restart uvicorn to apply changes
 echo "🔄 Restarting FastAPI application..."
-if [ ! -z "$UVICORN_PID" ]; then
-  kill $UVICORN_PID 2>/dev/null || true
-  echo "✅ Sent restart signal to uvicorn (PID: $UVICORN_PID)"
+
+# Find and kill uvicorn process with timeout
+UVICORN_PROC=$(ps aux | grep "uvicorn main:app" | grep -v grep | awk '{print $2}' | head -1)
+if [ ! -z "$UVICORN_PROC" ]; then
+  echo "🔪 Killing old uvicorn (PID: $UVICORN_PROC)"
+  kill -9 $UVICORN_PROC 2>/dev/null || true
+  sleep 1
 else
-  # Find and kill uvicorn process
-  UVICORN_PROC=$(ps aux | grep "uvicorn main:app" | grep -v grep | awk '{print $2}' | head -1)
-  if [ ! -z "$UVICORN_PROC" ]; then
-    kill $UVICORN_PROC 2>/dev/null || true
-    echo "✅ Sent restart signal to uvicorn (PID: $UVICORN_PROC)"
-  else
-    echo "⚠️  Warning: Could not find uvicorn process to restart"
-  fi
+  echo "ℹ️  No existing uvicorn process found"
 fi
 
-# Give uvicorn a moment to restart
-sleep 2
-
-# Restart uvicorn in the background
+# Restart uvicorn in the background (don't wait for it)
 source /opt/venv/bin/activate
-uvicorn main:app --host 0.0.0.0 --port 8000 --log-level info 2>&1 &
+nohup uvicorn main:app --host 0.0.0.0 --port 8000 --log-level info > /tmp/uvicorn.log 2>&1 &
 NEW_UVICORN_PID=$!
 echo "✅ Uvicorn restarted (new PID: $NEW_UVICORN_PID)"
 
-# Update the PID file for startup.sh to track
+# Update the PID file for tracking
 echo $NEW_UVICORN_PID > /tmp/uvicorn.pid
 
+# Don't wait for uvicorn to fully start - let it boot in background
 echo ""
-echo "✅ Reload complete!"
+echo "✅ Reload complete! (uvicorn starting in background)"
 echo "=================================================="
 
 exit 0

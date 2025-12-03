@@ -44,7 +44,7 @@ class ReloadHandler(BaseHTTPRequestHandler):
                 ['bash', 'reload-source.sh', chat_id, version_id],
                 capture_output=True,
                 text=True,
-                timeout=30,
+                timeout=60,
                 cwd=os.path.dirname(os.path.abspath(__file__))
             )
             
@@ -142,7 +142,7 @@ class ReloadHandler(BaseHTTPRequestHandler):
                 ['bash', 'reload-source.sh', chat_id, version_id],
                 capture_output=True,
                 text=True,
-                timeout=30,
+                timeout=60,
                 cwd=os.path.dirname(os.path.abspath(__file__))
             )
             
