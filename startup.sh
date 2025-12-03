@@ -38,13 +38,13 @@ if [ ! -z "$DATABASE_URL" ]; then
     fi
     
     # Create PostgREST config file
-    cat > /tmp/postgrest.conf << EOF
+    cat > /tmp/postgrest.conf << PGCONF
 db-uri = "${DB_URI}"
 db-anon-role = "postgres"
 db-schema = "public"
 server-host = "0.0.0.0"
 server-port = 3000
-EOF
+PGCONF
     
     # Start PostgREST on port 3000 (redirect stderr to stdout)
     /usr/local/bin/postgrest /tmp/postgrest.conf 2>&1 &
@@ -56,9 +56,17 @@ else
     echo "⚠️  DATABASE_URL not set, PostgREST will not be started"
 fi
 
-# Start User's FastAPI application with hot reload (redirect stderr to stdout)
+# Start User's FastAPI application with hot reload using polling
+# Use --reload-dir to limit watching to specific directories
+# Use --reload-delay to add small delay before reload
 echo "🚀 Starting User's FastAPI application with hot reload..."
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload 2>&1 &
+uvicorn main:app \
+  --host 0.0.0.0 \
+  --port 8000 \
+  --reload \
+  --reload-dir /app/backend \
+  --reload-delay 2 \
+  --log-level info 2>&1 &
 UVICORN_PID=$!
 
 echo "✅ User's Backend started on port 8000 (hot reload enabled)"
