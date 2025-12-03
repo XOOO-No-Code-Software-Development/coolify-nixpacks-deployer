@@ -56,19 +56,20 @@ else
     echo "⚠️  DATABASE_URL not set, PostgREST will not be started"
 fi
 
-# Start User's FastAPI application with hot reload
-# Include only *.py files to avoid watching too many files
-echo "🚀 Starting User's FastAPI application with hot reload..."
+# Start User's FastAPI application WITHOUT auto-reload
+# Reload will be triggered manually via reload-service.py
+# This approach:
+# - Avoids "too many open files" error
+# - Gives us full control over when reload happens
+# - Reload is triggered by platform via HTTP call to port 9000
+echo "🚀 Starting User's FastAPI application..."
 uvicorn main:app \
   --host 0.0.0.0 \
   --port 8000 \
-  --reload \
-  --reload-include "*.py" \
-  --reload-delay 2 \
   --log-level info 2>&1 &
 UVICORN_PID=$!
 
-echo "✅ User's Backend started on port 8000 (hot reload enabled)"
+echo "✅ User's Backend started on port 8000"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "🌐 User API:      http://localhost:8000"
 echo "🔧 Reload Service: http://localhost:9000"
@@ -76,6 +77,7 @@ if [ ! -z "$DATABASE_URL" ]; then
     echo "📊 PostgREST:     http://localhost:3000"
 fi
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "ℹ️  Hot reload: Managed by reload service on port 9000"
 
 # Wait for all background processes
 wait

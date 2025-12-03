@@ -1,90 +1,59 @@
 #!/bin/bash
-set -e
 
-echo "=================================================="
-echo "Reloading backend source code"
-echo "=================================================="
+# Hot Reload Script
+# Downloads specific version from v0 API and replaces local files
+# Triggered by reload-service.py when platform calls /reload endpoint
 
-# Parse inputs from arguments
-CHAT_ID="${1}"
-VERSION_ID="${2}"
+set -e  # Exit on error
 
-# Validate required inputs
+CHAT_ID="$1"
+VERSION_ID="$2"
+
 if [ -z "$CHAT_ID" ] || [ -z "$VERSION_ID" ]; then
-  echo "❌ ERROR: CHAT_ID and VERSION_ID required"
-  echo "Usage: bash reload-source.sh <CHAT_ID> <VERSION_ID>"
+  echo "❌ ERROR: CHAT_ID and VERSION_ID are required"
+  echo "Usage: $0 <CHAT_ID> <VERSION_ID>"
   exit 1
 fi
 
-# Validate API credentials
-if [ -z "$V0_API_KEY" ]; then
-  echo "❌ ERROR: V0_API_KEY environment variable not set"
-  exit 1
-fi
-
-V0_API_URL="${V0_API_URL:-https://api.v0.dev/v1}"
-
-echo "🔄 Reloading backend for chat: $CHAT_ID"
-echo "📦 Version: $VERSION_ID"
-echo "🌐 API URL: $V0_API_URL"
+echo "=================================================="
+echo "🔄 Hot Reload Triggered"
+echo "📝 Chat ID: $CHAT_ID"
+echo "🆔 Version ID: $VERSION_ID"
+echo "=================================================="
 echo ""
 
-# Fetch version files from v0 API
-echo "⬇️  Fetching version $VERSION_ID..."
-VERSION_RESPONSE=$(curl -s -w "HTTP_STATUS:%{http_code}" \
-  -H "Authorization: Bearer $V0_API_KEY" \
-  "$V0_API_URL/chats/$CHAT_ID/versions/$VERSION_ID?includeDefaultFiles=true")
+V0_API_KEY="${V0_API_KEY}"
+V0_API_URL="${V0_API_URL:-https://api.v0.dev/v1}"
 
-# Extract HTTP status
-HTTP_STATUS=$(echo "$VERSION_RESPONSE" | grep -o "HTTP_STATUS:[0-9]*" | cut -d: -f2)
-VERSION_RESPONSE=$(echo "$VERSION_RESPONSE" | sed 's/HTTP_STATUS:[0-9]*$//')
-
-echo "📡 API Response Status: $HTTP_STATUS"
-
-if [ "$HTTP_STATUS" != "200" ]; then
-  echo "❌ ERROR: API request failed with status $HTTP_STATUS"
-  echo "Response: $VERSION_RESPONSE"
+if [ -z "$V0_API_KEY" ]; then
+  echo "❌ ERROR: V0_API_KEY is not set"
   exit 1
 fi
 
-# Save response to temporary file for processing
+# Fetch specific version details
+echo "📥 Fetching version $VERSION_ID..."
+VERSION_RESPONSE=$(curl -s -X GET \
+  "${V0_API_URL}/chats/${CHAT_ID}/versions/${VERSION_ID}" \
+  -H "Authorization: Bearer ${V0_API_KEY}" \
+  -H "Content-Type: application/json")
+
+if [ -z "$VERSION_RESPONSE" ]; then
+  echo "❌ ERROR: Failed to fetch version details"
+  exit 1
+fi
+
+# Check if response contains error
+if echo "$VERSION_RESPONSE" | grep -q '"error"'; then
+  echo "❌ ERROR: API returned error:"
+  echo "$VERSION_RESPONSE" | jq -r '.error // .message // .'
+  exit 1
+fi
+
+# Save response for debugging
 echo "$VERSION_RESPONSE" > /tmp/version_response.json
 
-# Extract and create files using jq if available
+# Check if jq is available
 if command -v jq &> /dev/null; then
-  echo "📂 Extracting files using jq..."
-  
-  # Count total files
-  TOTAL_FILE_COUNT=$(echo "$VERSION_RESPONSE" | jq '.files | length')
-  echo "📊 Found $TOTAL_FILE_COUNT total files"
-  
-  # Filter and count backend files only
-  BACKEND_FILE_COUNT=$(echo "$VERSION_RESPONSE" | jq '[.files[] | select(.name | startswith("backend/"))] | length')
-  echo "📊 Found $BACKEND_FILE_COUNT backend files (filtering out non-backend files)"
-  
-  # Check if we have backend files
-  if [ "$BACKEND_FILE_COUNT" -eq 0 ]; then
-    echo "⚠️  No backend files found in version"
-    exit 1
-  fi
-  
-  # Clean existing backend files (preserve system files)
-  echo "🧹 Removing old backend files..."
-  find . -mindepth 1 -maxdepth 1 \
-    ! -name 'reload-source.sh' \
-    ! -name 'reload-service.py' \
-    ! -name 'download-source.sh' \
-    ! -name 'startup.sh' \
-    ! -name 'nixpacks.toml' \
-    ! -name 'start-with-download.sh' \
-    ! -name '.git' \
-    ! -name '.gitignore' \
-    ! -name 'README.md' \
-    ! -name 'backend' \
-    ! -name 'base-image' \
-    ! -name 'test-*.sh' \
-    -exec rm -rf {} + 2>/dev/null || true
-  
   # Extract backend files from version
   echo "📂 Extracting backend files..."
   echo "$VERSION_RESPONSE" | jq -r '.files[] | select(.name | startswith("backend/")) | @json' | while IFS= read -r file; do
@@ -114,10 +83,40 @@ fi
 rm -f /tmp/version_response.json
 
 echo ""
-echo "✅ Reload complete!"
-echo "🔥 Uvicorn will auto-detect file changes and reload"
-echo ""
 echo "📋 Updated files:"
 ls -la *.py 2>/dev/null || echo "No Python files found"
 echo ""
+
+# Restart uvicorn to apply changes
+echo "🔄 Restarting FastAPI application..."
+if [ ! -z "$UVICORN_PID" ]; then
+  kill $UVICORN_PID 2>/dev/null || true
+  echo "✅ Sent restart signal to uvicorn (PID: $UVICORN_PID)"
+else
+  # Find and kill uvicorn process
+  UVICORN_PROC=$(ps aux | grep "uvicorn main:app" | grep -v grep | awk '{print $2}' | head -1)
+  if [ ! -z "$UVICORN_PROC" ]; then
+    kill $UVICORN_PROC 2>/dev/null || true
+    echo "✅ Sent restart signal to uvicorn (PID: $UVICORN_PROC)"
+  else
+    echo "⚠️  Warning: Could not find uvicorn process to restart"
+  fi
+fi
+
+# Give uvicorn a moment to restart
+sleep 2
+
+# Restart uvicorn in the background
+source /opt/venv/bin/activate
+uvicorn main:app --host 0.0.0.0 --port 8000 --log-level info 2>&1 &
+NEW_UVICORN_PID=$!
+echo "✅ Uvicorn restarted (new PID: $NEW_UVICORN_PID)"
+
+# Update the PID file for startup.sh to track
+echo $NEW_UVICORN_PID > /tmp/uvicorn.pid
+
+echo ""
+echo "✅ Reload complete!"
 echo "=================================================="
+
+exit 0
