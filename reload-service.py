@@ -40,28 +40,18 @@ class ReloadHandler(BaseHTTPRequestHandler):
         
         # Execute reload script
         try:
+            # Execute reload script with real-time output streaming
             result = subprocess.run(
                 ['bash', 'reload-source.sh', chat_id, version_id],
-                capture_output=True,
-                text=True,
                 timeout=60,
                 cwd=os.path.dirname(os.path.abspath(__file__))
             )
-            
-            # Print download progress
-            if result.stdout:
-                print(f"[Reload Service] 📄 Download output:")
-                for line in result.stdout.split('\n'):
-                    if line.strip():
-                        print(f"[Reload Service]   {line}")
             
             response = {
                 "success": result.returncode == 0,
                 "chatId": chat_id,
                 "versionId": version_id,
-                "message": "Reload completed" if result.returncode == 0 else "Reload failed",
-                "output": result.stdout,
-                "error": result.stderr if result.returncode != 0 else None
+                "message": "Reload completed" if result.returncode == 0 else "Reload failed"
             }
             
             self.send_response(200 if result.returncode == 0 else 500)
@@ -146,28 +136,18 @@ class ReloadHandler(BaseHTTPRequestHandler):
             print(f"[Reload Service] 📥 Downloading version files...")
             
             # Execute reload script
+            # Execute reload script with real-time output streaming
             result = subprocess.run(
                 ['bash', 'reload-source.sh', chat_id, version_id],
-                capture_output=True,
-                text=True,
                 timeout=60,
                 cwd=os.path.dirname(os.path.abspath(__file__))
             )
-            
-            # Print download progress
-            if result.stdout:
-                print(f"[Reload Service] 📄 Download output:")
-                for line in result.stdout.split('\n'):
-                    if line.strip():
-                        print(f"[Reload Service]   {line}")
             
             response_data = {
                 "success": result.returncode == 0,
                 "chatId": chat_id,
                 "versionId": version_id,
-                "message": "Auto-reload completed" if result.returncode == 0 else "Auto-reload failed",
-                "output": result.stdout,
-                "error": result.stderr if result.returncode != 0 else None
+                "message": "Auto-reload completed" if result.returncode == 0 else "Auto-reload failed"
             }
             
             self.send_response(200 if result.returncode == 0 else 500)
