@@ -113,6 +113,7 @@ fi
 # Restart uvicorn in the background (don't wait for it)
 source /opt/venv/bin/activate
 bash start-backend.sh &
+disown
 NEW_UVICORN_PID=$!
 echo "✅ Uvicorn restarted (new PID: $NEW_UVICORN_PID)"
 
