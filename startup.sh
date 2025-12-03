@@ -3,8 +3,8 @@
 # Function to handle shutdown
 shutdown() {
     echo "Shutting down services..."
-    kill $POSTGREST_PID $UVICORN_PID 2>/dev/null
-    wait $POSTGREST_PID $UVICORN_PID 2>/dev/null
+    kill $RELOAD_SERVICE_PID $POSTGREST_PID $UVICORN_PID 2>/dev/null
+    wait $RELOAD_SERVICE_PID $POSTGREST_PID $UVICORN_PID 2>/dev/null
     exit 0
 }
 
@@ -13,6 +13,18 @@ trap shutdown SIGTERM SIGINT
 
 # Activate virtual environment
 source /opt/venv/bin/activate
+
+# Initial source download (only on first boot)
+if [ ! -f "main.py" ]; then
+  echo "📦 First boot - downloading initial source..."
+  bash download-source.sh
+fi
+
+# Start System Reload Service (port 9000) - INDEPENDENT OF USER CODE
+echo "🔧 Starting System Reload Service on port 9000..."
+python3 reload-service.py 2>&1 &
+RELOAD_SERVICE_PID=$!
+echo "✅ Reload Service started (PID: $RELOAD_SERVICE_PID)"
 
 # Start PostgREST if DATABASE_URL is set
 if [ ! -z "$DATABASE_URL" ]; then
@@ -44,16 +56,17 @@ else
     echo "⚠️  DATABASE_URL not set, PostgREST will not be started"
 fi
 
-# Start the FastAPI application (redirect stderr to stdout)
-echo "🚀 Starting FastAPI application..."
-uvicorn main:app --host 0.0.0.0 --port 8000 2>&1 &
+# Start User's FastAPI application with hot reload (redirect stderr to stdout)
+echo "🚀 Starting User's FastAPI application with hot reload..."
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload 2>&1 &
 UVICORN_PID=$!
 
-echo "✅ FastAPI started on port 8000"
+echo "✅ User's Backend started on port 8000 (hot reload enabled)"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "🌐 API:       http://localhost:8000"
+echo "🌐 User API:      http://localhost:8000"
+echo "🔧 Reload Service: http://localhost:9000"
 if [ ! -z "$DATABASE_URL" ]; then
-    echo " PostgREST: http://localhost:3000"
+    echo "📊 PostgREST:     http://localhost:3000"
 fi
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
