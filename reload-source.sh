@@ -66,7 +66,7 @@ if command -v jq &> /dev/null; then
   fi
   
   # Clean existing files (preserve system files)
-  echo "🧹 Removing old deployment files..."
+  echo "�� Removing old deployment files..."
   find . -mindepth 1 -maxdepth 1 \
     ! -name 'reload-source.sh' \
     ! -name 'reload-service.py' \
@@ -74,6 +74,7 @@ if command -v jq &> /dev/null; then
     ! -name 'startup.sh' \
     ! -name 'nixpacks.toml' \
     ! -name 'start-with-download.sh' \
+    ! -name 'start-backend.sh' \
     ! -name '.git' \
     ! -name '.gitignore' \
     ! -name 'README.md' \
@@ -83,9 +84,6 @@ if command -v jq &> /dev/null; then
   
   # Extract and download files
   echo "📂 Downloading deployment files..."
-  
-  # Create temporary directory for downloads
-  mkdir -p /tmp/vercel-download
   
   # Parse file list and download each file
   echo "$FILES_RESPONSE" | jq -r '.files[] | @json' | while IFS= read -r file; do
@@ -117,7 +115,6 @@ fi
 
 # Clean up temporary files
 rm -f /tmp/files_response.json
-rm -rf /tmp/vercel-download
 
 echo ""
 echo "✅ Reload complete!"

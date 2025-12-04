@@ -8,10 +8,10 @@ Completely independent of user's backend code
 import os
 import subprocess
 import json
+import urllib.request
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 
-RELOAD_SECRET = os.getenv("RELOAD_SECRET", "")
 PORT = 9000
 
 class ReloadHandler(BaseHTTPRequestHandler):
@@ -27,12 +27,6 @@ class ReloadHandler(BaseHTTPRequestHandler):
             self.send_error(404, "Not Found")
             return
         
-        # Check authorization
-        auth_header = self.headers.get('Authorization', '')
-        if not auth_header or auth_header != f"Bearer {RELOAD_SECRET}":
-            self.send_error(401, "Unauthorized")
-            return
-        
         # Parse query parameters
         params = parse_qs(parsed_path.query)
         project_id = params.get('projectId', [None])[0]
@@ -45,12 +39,10 @@ class ReloadHandler(BaseHTTPRequestHandler):
         
         print(f"[Reload Service] 🔄 Reloading project={project_id}, chat={chat_id}, deployment={deployment_id}")
         
-        # Execute reload script
+        # Execute reload script with real-time output streaming
         try:
             result = subprocess.run(
                 ['bash', 'reload-source.sh', project_id, chat_id, deployment_id],
-                capture_output=True,
-                text=True,
                 timeout=60,
                 cwd=os.path.dirname(os.path.abspath(__file__))
             )
@@ -60,9 +52,7 @@ class ReloadHandler(BaseHTTPRequestHandler):
                 "projectId": project_id,
                 "chatId": chat_id,
                 "deploymentId": deployment_id,
-                "message": "Reload completed" if result.returncode == 0 else "Reload failed",
-                "output": result.stdout,
-                "error": result.stderr if result.returncode != 0 else None
+                "message": "Reload completed" if result.returncode == 0 else "Reload failed"
             }
             
             self.send_response(200 if result.returncode == 0 else 500)
@@ -73,7 +63,7 @@ class ReloadHandler(BaseHTTPRequestHandler):
             if result.returncode == 0:
                 print(f"[Reload Service] ✅ Reload successful")
             else:
-                print(f"[Reload Service] ❌ Reload failed: {result.stderr}")
+                print(f"[Reload Service] ❌ Reload failed")
             
         except subprocess.TimeoutExpired:
             print(f"[Reload Service] ⏱️  Reload timeout")
@@ -92,16 +82,18 @@ class ReloadHandler(BaseHTTPRequestHandler):
         else:
             self.send_error(404, "Not Found")
 
-if __name__ == '__main__':
-    if not RELOAD_SECRET:
-        print("[Reload Service] ⚠️  WARNING: RELOAD_SECRET not set!")
-    
+def run_server():
+    """Start the reload service"""
     server = HTTPServer(('0.0.0.0', PORT), ReloadHandler)
     print(f"[Reload Service] 🚀 Starting on port {PORT}")
-    print(f"[Reload Service] 🔒 Authorization: {'Enabled' if RELOAD_SECRET else 'DISABLED'}")
+    print(f"[Reload Service] 📡 POST /reload?projectId=X&chatId=Y&deploymentId=Z")
+    print(f"[Reload Service] 💚 GET /health - Health check")
     
     try:
         server.serve_forever()
     except KeyboardInterrupt:
-        print("[Reload Service] 🛑 Shutting down...")
+        print(f"[Reload Service] 🛑 Shutting down...")
         server.shutdown()
+
+if __name__ == '__main__':
+    run_server()
