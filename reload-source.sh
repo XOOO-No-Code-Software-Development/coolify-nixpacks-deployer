@@ -62,15 +62,15 @@ if command -v jq &> /dev/null; then
     def walk_tree(path):
       # Only files have uid, so check for that instead of type
       if .uid then
-        {name: (if path == "" then .name else (path + "/" + .name) end), uid: .uid}
+        {name: (if path == "" then .name else (path + .name) end), uid: .uid}
       # If it has children, recurse into them
       elif .children then
         # Skip pda folder
         if .name == "pda" then
           empty
         else
-          # Build new path for children
-          (.children[] | walk_tree(if path == "" then .name else (path + "/" + .name) end))
+          # Build new path for children - path already has trailing /
+          (.children[] | walk_tree(if path == "" then (.name + "/") else (path + .name + "/") end))
         end
       else
         empty
@@ -108,11 +108,15 @@ if command -v jq &> /dev/null; then
   # Extract and download files
   echo "📂 Downloading deployment files..."
   
-  # Create temporary file to track PIDs
+  # Create temporary files for tracking
   PIDS_FILE=$(mktemp)
+  FILES_TO_PROCESS=$(mktemp)
+  
+  # Save files list to temp file
+  echo "$FILES_LIST" | jq -r '.[] | @json' > "$FILES_TO_PROCESS"
   
   # Parse file list and download each file in parallel
-  echo "$FILES_LIST" | jq -r '.[] | @json' | while IFS= read -r file; do
+  while IFS= read -r file; do
     filename=$(echo "$file" | jq -r '.name')
     uid=$(echo "$file" | jq -r '.uid')
     
@@ -152,7 +156,7 @@ if command -v jq &> /dev/null; then
       # Clear the file
       > "$PIDS_FILE"
     fi
-  done
+  done < "$FILES_TO_PROCESS"
   
   # Wait for all remaining downloads to complete
   echo "⏳ Waiting for all downloads to complete..."
@@ -160,8 +164,8 @@ if command -v jq &> /dev/null; then
     wait "$pid" 2>/dev/null || true
   done < "$PIDS_FILE"
   
-  # Clean up PID tracking file
-  rm -f "$PIDS_FILE"
+  # Clean up temporary files
+  rm -f "$PIDS_FILE" "$FILES_TO_PROCESS"
   
   echo "✅ All files downloaded successfully!"
 else
