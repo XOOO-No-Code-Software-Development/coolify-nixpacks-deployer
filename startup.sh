@@ -14,7 +14,25 @@ trap shutdown SIGTERM SIGINT
 # Initial source download (only on first boot)
 if [ ! -f "package.json" ]; then
   echo "📦 First boot - downloading initial source..."
-  bash download-source.sh
+  
+  # Check if we have deployment configuration
+  if [ -z "$PROJECT_ID" ] || [ -z "$CHAT_ID" ] || [ -z "$DEPLOYMENT_ID" ]; then
+    echo "⚠️  No deployment configuration found"
+    echo "📦 Using empty_template as default application"
+    
+    # Copy empty_template to root
+    if [ -d "empty_template" ]; then
+      echo "📂 Copying empty_template files..."
+      cp -r empty_template/* .
+      echo "✅ Empty template loaded successfully"
+    else
+      echo "❌ ERROR: empty_template directory not found"
+      exit 1
+    fi
+  else
+    # Download from Vercel API
+    bash download-source.sh
+  fi
 fi
 
 # Start System Reload Service (port 9000) - INDEPENDENT OF USER CODE

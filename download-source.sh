@@ -7,8 +7,19 @@ echo "=================================================="
 
 # Check required environment variables
 if [ -z "$PROJECT_ID" ] || [ -z "$CHAT_ID" ] || [ -z "$DEPLOYMENT_ID" ]; then
-  echo "❌ ERROR: PROJECT_ID, CHAT_ID, and DEPLOYMENT_ID environment variables required"
-  exit 1
+  echo "⚠️  No deployment configuration found"
+  echo "📦 Using empty_template as default application"
+  
+  # Copy empty_template to root
+  if [ -d "empty_template" ]; then
+    echo "📂 Copying empty_template files..."
+    cp -r empty_template/* .
+    echo "✅ Empty template loaded successfully"
+    exit 0
+  else
+    echo "❌ ERROR: empty_template directory not found"
+    exit 1
+  fi
 fi
 
 if [ -z "$VERCEL_TOKEN" ]; then
@@ -72,6 +83,7 @@ if command -v jq &> /dev/null; then
     ! -name '.gitignore' \
     ! -name 'README.md' \
     ! -name 'base-image' \
+    ! -name 'empty_template' \
     ! -name 'test-*.sh' \
     -exec rm -rf {} + 2>/dev/null || true
   

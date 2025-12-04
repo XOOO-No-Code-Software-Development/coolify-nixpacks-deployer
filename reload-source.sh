@@ -66,7 +66,7 @@ if command -v jq &> /dev/null; then
   fi
   
   # Clean existing files (preserve system files)
-  echo "�� Removing old deployment files..."
+  echo "🧹 Removing old deployment files..."
   find . -mindepth 1 -maxdepth 1 \
     ! -name 'reload-source.sh' \
     ! -name 'reload-service.py' \
@@ -79,6 +79,7 @@ if command -v jq &> /dev/null; then
     ! -name '.gitignore' \
     ! -name 'README.md' \
     ! -name 'base-image' \
+    ! -name 'empty_template' \
     ! -name 'test-*.sh' \
     -exec rm -rf {} + 2>/dev/null || true
   
