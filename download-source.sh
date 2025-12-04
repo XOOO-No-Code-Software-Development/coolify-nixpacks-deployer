@@ -11,16 +11,47 @@ if [ -z "$CHAT_ID" ]; then
   exit 1
 fi
 
-if [ -z "$VERSION_ID" ]; then
-  echo "❌ ERROR: VERSION_ID environment variable not set"
+echo "📦 Chat ID: $CHAT_ID"
+
+# Check if V0_API_KEY is set
+if [ -z "$V0_API_KEY" ]; then
+  echo "❌ ERROR: V0_API_KEY environment variable not set"
   exit 1
 fi
 
-echo "📦 Chat ID: $CHAT_ID"
-echo "📦 Version ID: $VERSION_ID"
+# Use custom V0_API_URL if set, otherwise use default
+V0_API_URL="${V0_API_URL:-https://api.v0.dev/v1}"
+echo "🌐 API URL: $V0_API_URL"
 
-# Check if VERSION_ID is "initial"
-if [ "$VERSION_ID" = "initial" ]; then
+# Fetch chat details to get latest version
+echo "⬇️  Fetching chat details to get latest version..."
+CHAT_RESPONSE=$(curl -s -w "HTTP_STATUS:%{http_code}" \
+  -H "Authorization: Bearer $V0_API_KEY" \
+  "$V0_API_URL/chats/$CHAT_ID")
+
+# Extract HTTP status
+HTTP_STATUS=$(echo "$CHAT_RESPONSE" | grep -o "HTTP_STATUS:[0-9]*" | cut -d: -f2)
+CHAT_RESPONSE=$(echo "$CHAT_RESPONSE" | sed 's/HTTP_STATUS:[0-9]*$//')
+
+echo "� API Response Status: $HTTP_STATUS"
+
+if [ "$HTTP_STATUS" != "200" ]; then
+  echo "❌ ERROR: Chat API request failed with status $HTTP_STATUS"
+  echo "Response: $CHAT_RESPONSE"
+  echo "⚠️  Falling back to initial backend template"
+  VERSION_ID="initial"
+else
+  # Extract latest version ID using jq if available
+  if command -v jq &> /dev/null; then
+    VERSION_ID=$(echo "$CHAT_RESPONSE" | jq -r '.latestVersion.id // "initial"')
+    echo "📦 Latest Version ID: $VERSION_ID"
+  else
+    echo "⚠️  jq not available, using initial template"
+    VERSION_ID="initial"
+  fi
+fi
+# Check if VERSION_ID is "initial" or not set
+if [ "$VERSION_ID" = "initial" ] || [ "$VERSION_ID" = "null" ] || [ -z "$VERSION_ID" ]; then
   echo "🎯 Version is 'initial' - using default backend template"
   echo "📂 Moving backend template files to root directory..."
   
@@ -42,15 +73,6 @@ fi
 
 # For non-initial versions, fetch from API
 echo "🎯 Version is '$VERSION_ID' - fetching from v0 API"
-
-if [ -z "$V0_API_KEY" ]; then
-  echo "❌ ERROR: V0_API_KEY environment variable not set"
-  exit 1
-fi
-
-# Use custom V0_API_URL if set, otherwise use default
-V0_API_URL="${V0_API_URL:-https://api.v0.dev/v1}"
-echo "🌐 API URL: $V0_API_URL"
 
 # Clean current directory (except this script, backend template, and .git)
 echo "🧹 Cleaning workspace..."
