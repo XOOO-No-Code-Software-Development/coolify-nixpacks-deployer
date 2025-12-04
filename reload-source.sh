@@ -100,7 +100,10 @@ if command -v jq &> /dev/null; then
   # Extract and download files
   echo "📂 Downloading deployment files..."
   
-  # Parse file list and download each file
+  # Create a temporary directory for parallel downloads
+  DOWNLOAD_PIDS=()
+  
+  # Parse file list and download each file in parallel
   echo "$FILES_LIST" | jq -r '.[] | @json' | while IFS= read -r file; do
     filename=$(echo "$file" | jq -r '.name')
     uid=$(echo "$file" | jq -r '.uid')
@@ -110,23 +113,37 @@ if command -v jq &> /dev/null; then
       continue
     fi
     
-    echo "⬇️  Downloading: $filename"
+    # Download file in background
+    (
+      # Download file content
+      FILE_CONTENT=$(curl -s \
+        -H "Authorization: Bearer $VERCEL_TOKEN" \
+        "$VERCEL_API_URL/v6/deployments/$DEPLOYMENT_ID/files/$uid")
+      
+      # Create directory if needed
+      filedir=$(dirname "$filename")
+      if [ "$filedir" != "." ]; then
+        mkdir -p "$filedir"
+      fi
+      
+      # Write file content
+      echo "$FILE_CONTENT" > "$filename"
+      echo "✅ Downloaded: $filename"
+    ) &
     
-    # Download file content
-    FILE_CONTENT=$(curl -s \
-      -H "Authorization: Bearer $VERCEL_TOKEN" \
-      "$VERCEL_API_URL/v6/deployments/$DEPLOYMENT_ID/files/$uid")
+    DOWNLOAD_PIDS+=($!)
     
-    # Create directory if needed
-    filedir=$(dirname "$filename")
-    if [ "$filedir" != "." ]; then
-      mkdir -p "$filedir"
+    # Limit concurrent downloads to 10 at a time
+    if [ ${#DOWNLOAD_PIDS[@]} -ge 10 ]; then
+      wait "${DOWNLOAD_PIDS[@]}"
+      DOWNLOAD_PIDS=()
     fi
-    
-    # Write file content
-    echo "$FILE_CONTENT" > "$filename"
-    echo "✅ Downloaded: $filename"
   done
+  
+  # Wait for remaining downloads to complete
+  if [ ${#DOWNLOAD_PIDS[@]} -gt 0 ]; then
+    wait "${DOWNLOAD_PIDS[@]}"
+  fi
 else
   echo "❌ ERROR: jq is not available"
   echo "jq is required for parsing JSON responses"
