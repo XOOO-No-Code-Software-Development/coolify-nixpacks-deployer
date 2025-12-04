@@ -1,5 +1,5 @@
-# XOOO Backend Deployment Configuration
-# Uses pre-built base image with Python, dependencies, and PostgREST
+# XOOO Full-Stack Deployment Configuration
+# Uses pre-built base image with Python, Node.js, and PostgREST
 
 # Keep Python provider so nixpacks can detect the app type
 providers = ["python"]
@@ -8,24 +8,30 @@ providers = ["python"]
 buildImage = "xooo-backend-base:latest"
 
 [phases.setup]
-# Base image already has everything - skip ALL setup operations
-# This prevents nixpacks from running apt-get update and downloading package lists
-nixPkgs = []
+# Install Node.js and npm for Next.js frontend
+nixPkgs = ["nodejs_20", "npm-9_x"]
 nixLibs = []
 aptPkgs = []
-# Add a noop command to prevent provider defaults from being added
-cmds = ["echo 'Using pre-built base image, skipping setup'"]
+cmds = [
+  "echo 'Installing Node.js for Next.js frontend...'",
+  "node --version",
+  "npm --version"
+]
 
 [phases.install]
 cmds = [
-  # Download source code from v0 API
+  # Download source code from Vercel API or use empty_template
   "bash download-source.sh",
   
-  # Install dependencies from requirements.txt
-  # pip will be smart: already installed packages are skipped, new ones are installed
-  # This maintains full flexibility for new dependencies while being fast for existing ones
-  ". /opt/venv/bin/activate && if [ -f requirements.txt ]; then pip install -r requirements.txt; fi",
+  # Install Next.js dependencies if package.json exists
+  "if [ -f package.json ]; then echo '📦 Installing Next.js dependencies...' && npm install; fi",
   
-  # Validate the application
-  # ". /opt/venv/bin/activate && python -c 'import main; app = main.app; print(\"✅ Application validation successful\")'",
+  # Install Python dependencies if requirements.txt exists
+  ". /opt/venv/bin/activate && if [ -f backend/requirements.txt ]; then echo '📦 Installing Python dependencies...' && pip install -r backend/requirements.txt; fi",
+]
+
+[phases.build]
+cmds = [
+  # Build Next.js if package.json exists
+  "if [ -f package.json ]; then echo '🔨 Building Next.js app...' && npm run build; fi",
 ]

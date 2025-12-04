@@ -44,18 +44,6 @@ echo "✅ Reload Service started (PID: $RELOAD_SERVICE_PID)"
 # Start Next.js Frontend (port 3000) from root directory
 echo "🎨 Starting Next.js Frontend..."
 if [ -f "package.json" ]; then
-    # Install dependencies if node_modules doesn't exist
-    if [ ! -d "node_modules" ]; then
-        echo "📦 Installing Next.js dependencies..."
-        npm install
-    fi
-    
-    # Build Next.js app if .next doesn't exist
-    if [ ! -d ".next" ]; then
-        echo "🔨 Building Next.js app..."
-        npm run build
-    fi
-    
     # Start Next.js in production mode
     npm run start 2>&1 &
     NEXTJS_PID=$!
@@ -73,15 +61,9 @@ if [ -d "backend" ] && [ -f "backend/main.py" ]; then
         source /opt/venv/bin/activate
     fi
     
-    # Install backend dependencies if requirements.txt exists
-    if [ -f "backend/requirements.txt" ]; then
-        echo "📦 Installing Python dependencies..."
-        pip install -q -r backend/requirements.txt
-    fi
-    
-    # Start FastAPI with hot reload
+    # Start FastAPI without reload (we have our own reload service)
     cd backend
-    uvicorn main:app --host 0.0.0.0 --port 8000 --reload 2>&1 &
+    uvicorn main:app --host 0.0.0.0 --port 8000 2>&1 &
     UVICORN_PID=$!
     cd ..
     echo "✅ Python Backend started on port 8000 (PID: $UVICORN_PID)"
