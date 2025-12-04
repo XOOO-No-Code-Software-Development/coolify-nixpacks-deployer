@@ -8,8 +8,8 @@ providers = ["python"]
 buildImage = "xooo-backend-base:latest"
 
 [phases.setup]
-# Install Node.js and npm for Next.js frontend
-nixPkgs = ["nodejs_20", "npm-9_x"]
+# Install Node.js (includes npm) for Next.js frontend
+nixPkgs = ["nodejs_20"]
 nixLibs = []
 aptPkgs = []
 cmds = [
