@@ -3,8 +3,8 @@
 # Function to handle shutdown
 shutdown() {
     echo "Shutting down services..."
-    kill $RELOAD_SERVICE_PID $NEXTJS_PID $UVICORN_PID 2>/dev/null
-    wait $RELOAD_SERVICE_PID $NEXTJS_PID $UVICORN_PID 2>/dev/null
+    kill $RELOAD_SERVICE_PID $NEXTJS_PID $UVICORN_PID $POSTGREST_PID 2>/dev/null
+    wait $RELOAD_SERVICE_PID $NEXTJS_PID $UVICORN_PID $POSTGREST_PID 2>/dev/null
     exit 0
 }
 
@@ -72,10 +72,32 @@ else
     UVICORN_PID=""
 fi
 
+# Start PostgREST (port 3001) if DATABASE_URL is provided
+echo "🗄️  Starting PostgREST..."
+if [ -n "$DATABASE_URL" ]; then
+    # Create PostgREST config
+    cat > /tmp/postgrest.conf << EOF
+db-uri = "$DATABASE_URL"
+db-schemas = "public"
+db-anon-role = "postgres"
+server-host = "0.0.0.0"
+server-port = 3001
+EOF
+    
+    # Start PostgREST
+    /usr/local/bin/postgrest /tmp/postgrest.conf 2>&1 &
+    POSTGREST_PID=$!
+    echo "✅ PostgREST started on port 3001 (PID: $POSTGREST_PID)"
+else
+    echo "⚠️  DATABASE_URL not set, skipping PostgREST startup"
+    POSTGREST_PID=""
+fi
+
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "🌐 Frontend (Next.js): http://localhost:3000"
 echo "🔧 Backend API (FastAPI): http://localhost:8000"
 echo "🔄 Reload Service: http://localhost:9000"
+echo "🗄️  PostgREST API: http://localhost:3001"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 # Wait for all background processes
