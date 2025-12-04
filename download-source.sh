@@ -64,10 +64,18 @@ if command -v jq &> /dev/null; then
   # The Vercel API returns a hierarchical structure with directories and children
   FILES_LIST=$(echo "$FILES_RESPONSE" | jq -r '
     def walk_tree(path):
-      if .type == "file" then
+      # Only files have uid, so check for that instead of type
+      if .uid then
         {name: (if path == "" then .name else (path + "/" + .name) end), uid: .uid}
-      elif .type == "directory" and .children then
-        .children[] | walk_tree(if path == "" then .name else (path + "/" + .name) end)
+      # If it has children, recurse into them
+      elif .children then
+        # Skip pda folder
+        if .name == "pda" then
+          empty
+        else
+          # Build new path for children
+          (.children[] | walk_tree(if path == "" then .name else (path + "/" + .name) end))
+        end
       else
         empty
       end;
