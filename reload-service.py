@@ -20,7 +20,7 @@ class ReloadHandler(BaseHTTPRequestHandler):
         print(f"[Reload Service] {format % args}")
     
     def do_POST(self):
-        """Handle POST /reload?chatId=X&versionId=Y"""
+        """Handle POST /reload?projectId=X&chatId=Y&deploymentId=Z"""
         parsed_path = urlparse(self.path)
         
         if parsed_path.path != '/reload':
@@ -35,29 +35,31 @@ class ReloadHandler(BaseHTTPRequestHandler):
         
         # Parse query parameters
         params = parse_qs(parsed_path.query)
+        project_id = params.get('projectId', [None])[0]
         chat_id = params.get('chatId', [None])[0]
-        version_id = params.get('versionId', [None])[0]
+        deployment_id = params.get('deploymentId', [None])[0]
         
-        if not chat_id or not version_id:
-            self.send_error(400, "Missing chatId or versionId")
+        if not project_id or not chat_id or not deployment_id:
+            self.send_error(400, "Missing projectId, chatId, or deploymentId")
             return
         
-        print(f"[Reload Service] 🔄 Reloading chat={chat_id}, version={version_id}")
+        print(f"[Reload Service] 🔄 Reloading project={project_id}, chat={chat_id}, deployment={deployment_id}")
         
         # Execute reload script
         try:
             result = subprocess.run(
-                ['bash', 'reload-source.sh', chat_id, version_id],
+                ['bash', 'reload-source.sh', project_id, chat_id, deployment_id],
                 capture_output=True,
                 text=True,
-                timeout=30,
+                timeout=60,
                 cwd=os.path.dirname(os.path.abspath(__file__))
             )
             
             response = {
                 "success": result.returncode == 0,
+                "projectId": project_id,
                 "chatId": chat_id,
-                "versionId": version_id,
+                "deploymentId": deployment_id,
                 "message": "Reload completed" if result.returncode == 0 else "Reload failed",
                 "output": result.stdout,
                 "error": result.stderr if result.returncode != 0 else None
