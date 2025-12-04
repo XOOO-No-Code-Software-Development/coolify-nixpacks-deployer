@@ -112,8 +112,8 @@ if command -v jq &> /dev/null; then
   # Extract and download files
   echo "📂 Downloading deployment files..."
   
-  # Create a temporary directory for parallel downloads
-  DOWNLOAD_PIDS=()
+  # Create temporary file to track PIDs
+  PIDS_FILE=$(mktemp)
   
   # Parse file list and download each file in parallel
   echo "$FILES_LIST" | jq -r '.[] | @json' | while IFS= read -r file; do
@@ -143,19 +143,31 @@ if command -v jq &> /dev/null; then
       echo "✅ Downloaded: $filename"
     ) &
     
-    DOWNLOAD_PIDS+=($!)
+    # Store PID in file
+    echo $! >> "$PIDS_FILE"
     
     # Limit concurrent downloads to 10 at a time
-    if [ ${#DOWNLOAD_PIDS[@]} -ge 10 ]; then
-      wait "${DOWNLOAD_PIDS[@]}"
-      DOWNLOAD_PIDS=()
+    PID_COUNT=$(wc -l < "$PIDS_FILE")
+    if [ "$PID_COUNT" -ge 10 ]; then
+      # Wait for these PIDs
+      while read -r pid; do
+        wait "$pid" 2>/dev/null || true
+      done < "$PIDS_FILE"
+      # Clear the file
+      > "$PIDS_FILE"
     fi
   done
   
-  # Wait for remaining downloads to complete
-  if [ ${#DOWNLOAD_PIDS[@]} -gt 0 ]; then
-    wait "${DOWNLOAD_PIDS[@]}"
-  fi
+  # Wait for all remaining downloads to complete
+  echo "⏳ Waiting for all downloads to complete..."
+  while read -r pid; do
+    wait "$pid" 2>/dev/null || true
+  done < "$PIDS_FILE"
+  
+  # Clean up PID tracking file
+  rm -f "$PIDS_FILE"
+  
+  echo "✅ All files downloaded successfully!"
 else
   echo "❌ ERROR: jq is not available"
   echo "jq is required for parsing JSON responses"
