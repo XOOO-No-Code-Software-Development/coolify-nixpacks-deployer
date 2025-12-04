@@ -44,8 +44,8 @@ echo "✅ Reload Service started (PID: $RELOAD_SERVICE_PID)"
 # Start Next.js Frontend (port 3000) from root directory
 echo "🎨 Starting Next.js Frontend..."
 if [ -f "package.json" ]; then
-    # Start Next.js in production mode
-    npm run start 2>&1 &
+    # Start Next.js in production mode on port 3000
+    PORT=3000 npm run start 2>&1 &
     NEXTJS_PID=$!
     echo "✅ Next.js Frontend started on port 3000 (PID: $NEXTJS_PID)"
 else
