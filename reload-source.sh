@@ -61,17 +61,13 @@ if command -v jq &> /dev/null; then
   FILES_LIST=$(echo "$FILES_RESPONSE" | jq -r '
     def walk_tree(path):
       if .type == "file" then
-        {name: (path + "/" + .name), uid: .uid}
-      elif .type == "directory" then
-        if .children then
-          .children[] | walk_tree(path + "/" + .name)
-        else
-          empty
-        end
+        {name: (if path == "" then .name else (path + "/" + .name) end), uid: .uid}
+      elif .type == "directory" and .children then
+        .children[] | walk_tree(if path == "" then .name else (path + "/" + .name) end)
       else
         empty
       end;
-    .[] | walk_tree(".")
+    .[] | walk_tree("")
   ' | jq -s '.')
   
   # Count total files
@@ -106,11 +102,11 @@ if command -v jq &> /dev/null; then
   
   # Parse file list and download each file
   echo "$FILES_LIST" | jq -r '.[] | @json' | while IFS= read -r file; do
-    filename=$(echo "$file" | jq -r '.name' | sed 's|^\./||')  # Remove leading ./
+    filename=$(echo "$file" | jq -r '.name')
     uid=$(echo "$file" | jq -r '.uid')
     
-    # Skip if filename is empty or just "."
-    if [ -z "$filename" ] || [ "$filename" = "." ]; then
+    # Skip if filename is empty
+    if [ -z "$filename" ]; then
       continue
     fi
     
