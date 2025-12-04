@@ -60,8 +60,26 @@ echo "$FILES_RESPONSE" > /tmp/files_response.json
 if command -v jq &> /dev/null; then
   echo "📂 Extracting file list using jq..."
   
+  # Recursively extract all files from the tree structure
+  # The Vercel API returns a hierarchical structure with directories and children
+  FILES_LIST=$(echo "$FILES_RESPONSE" | jq -r '
+    def walk_tree(path):
+      if .type == "file" then
+        {name: (path + "/" + .name), uid: .uid}
+      elif .type == "directory" then
+        if .children then
+          .children[] | walk_tree(path + "/" + .name)
+        else
+          empty
+        end
+      else
+        empty
+      end;
+    .[] | walk_tree(".")
+  ' | jq -s '.')
+  
   # Count total files
-  TOTAL_FILE_COUNT=$(echo "$FILES_RESPONSE" | jq '.files | length' 2>/dev/null || echo "0")
+  TOTAL_FILE_COUNT=$(echo "$FILES_LIST" | jq 'length' 2>/dev/null || echo "0")
   echo "📊 Found $TOTAL_FILE_COUNT total files"
   
   if [ "$TOTAL_FILE_COUNT" -eq 0 ]; then
@@ -91,9 +109,14 @@ if command -v jq &> /dev/null; then
   echo "📂 Downloading deployment files..."
   
   # Parse file list and download each file
-  echo "$FILES_RESPONSE" | jq -r '.files[] | @json' | while IFS= read -r file; do
-    filename=$(echo "$file" | jq -r '.name')
+  echo "$FILES_LIST" | jq -r '.[] | @json' | while IFS= read -r file; do
+    filename=$(echo "$file" | jq -r '.name' | sed 's|^\./||')  # Remove leading ./
     uid=$(echo "$file" | jq -r '.uid')
+    
+    # Skip if filename is empty or just "."
+    if [ -z "$filename" ] || [ "$filename" = "." ]; then
+      continue
+    fi
     
     echo "⬇️  Downloading: $filename"
     
