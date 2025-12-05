@@ -101,9 +101,16 @@ if command -v jq &> /dev/null; then
   touch /tmp/reload_in_progress  # Signal to startup.sh to not restart yet
   pkill -f "next dev" || true
   
-  # Stop FastAPI backend if it's running
+  # Stop FastAPI backend if it's running (using PID file for precision)
   echo "🛑 Stopping FastAPI backend for reload..."
-  pkill -f "uvicorn main:app" || true
+  if [ -f /tmp/fastapi.pid ]; then
+    FASTAPI_PID=$(cat /tmp/fastapi.pid)
+    kill $FASTAPI_PID 2>/dev/null || true
+    rm -f /tmp/fastapi.pid
+  else
+    # Fallback to pkill if PID file doesn't exist
+    pkill -f "uvicorn main:app" || true
+  fi
   
   sleep 2
   
