@@ -197,6 +197,15 @@ fi
 rm -f /tmp/files_response.json
 
 echo ""
+
+# Install dependencies after initial download
+if [ -f "package.json" ]; then
+  echo "📦 Installing dependencies..."
+  npm install
+  echo "✅ Dependencies installed"
+fi
+
+echo ""
 echo "✅ Download complete!"
 echo ""
 echo "📋 Downloaded files (root):"
