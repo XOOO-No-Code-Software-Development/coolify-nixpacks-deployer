@@ -139,9 +139,15 @@ if command -v jq &> /dev/null; then
   # Create temporary files for tracking
   PIDS_FILE=$(mktemp)
   FILES_TO_PROCESS=$(mktemp)
+  DOWNLOAD_LOG=$(mktemp)
   
   # Save files list to temp file
   echo "$FILES_LIST" | jq -r '.[] | @json' > "$FILES_TO_PROCESS"
+  
+  # Count files to download vs skip
+  TOTAL_FILES=0
+  SKIPPED_FILES=0
+  DOWNLOADED_FILES=0
   
   # Parse file list and download each file in parallel
   while IFS= read -r file; do
@@ -153,27 +159,33 @@ if command -v jq &> /dev/null; then
       continue
     fi
     
+    TOTAL_FILES=$((TOTAL_FILES + 1))
+    
     # Skip components/ui files if they already exist
     if [[ "$filename" == components/ui/* ]] && [ -f "$filename" ]; then
       echo "⏭️  Skipped (exists): $filename"
+      SKIPPED_FILES=$((SKIPPED_FILES + 1))
       continue
     fi
     
     # Skip public folder files if they already exist
     if [[ "$filename" == public/* ]] && [ -f "$filename" ]; then
       echo "⏭️  Skipped (exists): $filename"
+      SKIPPED_FILES=$((SKIPPED_FILES + 1))
       continue
     fi
     
     # Skip styles folder files if they already exist
     if [[ "$filename" == styles/* ]] && [ -f "$filename" ]; then
       echo "⏭️  Skipped (exists): $filename"
+      SKIPPED_FILES=$((SKIPPED_FILES + 1))
       continue
     fi
     
     # Skip package.json if it already exists
     if [[ "$filename" == "package.json" ]] && [ -f "$filename" ]; then
       echo "⏭️  Skipped (exists): $filename"
+      SKIPPED_FILES=$((SKIPPED_FILES + 1))
       continue
     fi
     
@@ -193,11 +205,13 @@ if command -v jq &> /dev/null; then
       # Extract base64 data and decode
       echo "$FILE_RESPONSE" | jq -r '.data' | base64 -d > "$filename"
       
-      echo "✅ Downloaded: $filename"
+      # Log to file (background processes can't reliably echo to stdout)
+      echo "✅ Downloaded: $filename" >> "$DOWNLOAD_LOG"
     ) &
     
     # Store PID in file
     echo $! >> "$PIDS_FILE"
+    DOWNLOADED_FILES=$((DOWNLOADED_FILES + 1))
     
     # Limit concurrent downloads to 10 at a time
     PID_COUNT=$(wc -l < "$PIDS_FILE")
@@ -217,10 +231,25 @@ if command -v jq &> /dev/null; then
     wait "$pid" 2>/dev/null || true
   done < "$PIDS_FILE"
   
-  # Clean up temporary files
-  rm -f "$PIDS_FILE" "$FILES_TO_PROCESS"
+  # Show download summary and logs
+  echo ""
+  echo "📊 Download Summary:"
+  echo "   Total files: $TOTAL_FILES"
+  echo "   Skipped: $SKIPPED_FILES"
+  echo "   Downloaded: $DOWNLOADED_FILES"
+  echo ""
   
-  echo "✅ All files downloaded successfully!"
+  # Display download log if it exists and has content
+  if [ -f "$DOWNLOAD_LOG" ] && [ -s "$DOWNLOAD_LOG" ]; then
+    echo "📥 Downloaded files:"
+    cat "$DOWNLOAD_LOG"
+    echo ""
+  fi
+  
+  # Clean up temporary files
+  rm -f "$PIDS_FILE" "$FILES_TO_PROCESS" "$DOWNLOAD_LOG"
+  
+  echo "✅ All files processed successfully!"
 else
   echo "❌ ERROR: jq is not available"
   echo "jq is required for parsing JSON responses"
