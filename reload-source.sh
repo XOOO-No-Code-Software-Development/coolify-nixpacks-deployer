@@ -96,7 +96,12 @@ if command -v jq &> /dev/null; then
     exit 1
   fi
   
-  # Clean existing files (preserve system files)
+  # Stop Next.js server BEFORE cleaning files to prevent restart loop
+  echo "🛑 Stopping Next.js server for reload..."
+  pkill -f "next dev" || true
+  sleep 2
+  
+  # Clean existing files (preserve system files and node_modules)
   echo "🧹 Removing old deployment files..."
   find . -mindepth 1 -maxdepth 1 \
     ! -name 'reload-source.sh' \
@@ -111,6 +116,7 @@ if command -v jq &> /dev/null; then
     ! -name 'README.md' \
     ! -name 'base-image' \
     ! -name 'empty_template' \
+    ! -name 'node_modules' \
     ! -name 'test-*.sh' \
     -exec rm -rf {} + 2>/dev/null || true
   
@@ -196,11 +202,8 @@ if [ -f "package.json" ]; then
   echo "✅ Dependencies installed"
 fi
 
-# Restart Next.js server to pick up changes
-echo "� Restarting Next.js server..."
-pkill -f "next dev" || true
-sleep 2
-echo "✅ Next.js server will restart automatically via startup.sh process manager"
+# Next.js server will restart automatically via startup.sh loop
+echo "✅ Next.js server will restart automatically"
 
 echo ""
 echo "✅ Reload complete!"
