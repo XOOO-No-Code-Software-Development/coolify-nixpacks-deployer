@@ -82,6 +82,13 @@ if [ -d "backend" ] && [ -f "backend/main.py" ]; then
                 sleep 1
             done
             
+            # Check if backend/main.py still exists after reload
+            if [ ! -f "backend/main.py" ]; then
+                echo "[FastAPI] ⚠️  backend/main.py not found after reload, skipping startup"
+                sleep 5
+                continue
+            fi
+            
             echo "[FastAPI] Starting server..."
             cd backend
             uvicorn main:app --host 0.0.0.0 --port 8000 2>&1 | sed -u 's/^/[FastAPI] /'
