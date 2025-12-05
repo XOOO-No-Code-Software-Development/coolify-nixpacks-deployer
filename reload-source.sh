@@ -319,6 +319,12 @@ echo ""
 # Install Python dependencies only if backend/requirements.txt changed
 if [ "$REQUIREMENTS_TXT_CHANGED" = true ]; then
   echo "🐍 Requirements.txt changed - installing Python dependencies..."
+  
+  # Activate virtual environment if it exists (Nix environment requires this)
+  if [ -d "/opt/venv" ]; then
+    source /opt/venv/bin/activate
+  fi
+  
   cd backend
   pip install --no-cache-dir -r requirements.txt
   cd ..
