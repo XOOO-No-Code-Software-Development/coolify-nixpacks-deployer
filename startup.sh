@@ -37,17 +37,25 @@ fi
 
 # Start System Reload Service (port 9000) - INDEPENDENT OF USER CODE
 echo "🔧 Starting System Reload Service on port 9000..."
-python3 reload-service.py 2>&1 &
+python3 reload-service.py 2>&1 | sed 's/^/[Reload Service] /' &
 RELOAD_SERVICE_PID=$!
 echo "✅ Reload Service started (PID: $RELOAD_SERVICE_PID)"
 
 # Start Next.js Frontend (port 3000) from root directory
 echo "🎨 Starting Next.js Frontend..."
 if [ -f "package.json" ]; then
-    # Start Next.js in production mode on port 3000
-    PORT=3000 npm run start 2>&1 &
-    NEXTJS_PID=$!
-    echo "✅ Next.js Frontend started on port 3000 (PID: $NEXTJS_PID)"
+    # Check if .next directory exists (production build)
+    if [ -d ".next" ]; then
+        echo "✅ Production build found, starting Next.js in production mode..."
+        PORT=3000 npm run start 2>&1 | sed 's/^/[Next.js] /' &
+        NEXTJS_PID=$!
+        echo "✅ Next.js Frontend started on port 3000 (PID: $NEXTJS_PID)"
+    else
+        echo "⚠️  .next directory not found, starting in development mode..."
+        PORT=3000 npm run dev 2>&1 | sed 's/^/[Next.js] /' &
+        NEXTJS_PID=$!
+        echo "✅ Next.js Frontend started in dev mode on port 3000 (PID: $NEXTJS_PID)"
+    fi
 else
     echo "⚠️  package.json not found, skipping Next.js startup"
     NEXTJS_PID=""
@@ -63,7 +71,7 @@ if [ -d "backend" ] && [ -f "backend/main.py" ]; then
     
     # Start FastAPI without reload (we have our own reload service)
     cd backend
-    uvicorn main:app --host 0.0.0.0 --port 8000 2>&1 &
+    uvicorn main:app --host 0.0.0.0 --port 8000 2>&1 | sed 's/^/[FastAPI] /' &
     UVICORN_PID=$!
     cd ..
     echo "✅ Python Backend started on port 8000 (PID: $UVICORN_PID)"
@@ -85,7 +93,7 @@ server-port = 3001
 EOF
     
     # Start PostgREST
-    /usr/local/bin/postgrest /tmp/postgrest.conf 2>&1 &
+    /usr/local/bin/postgrest /tmp/postgrest.conf 2>&1 | sed 's/^/[PostgREST] /' &
     POSTGREST_PID=$!
     echo "✅ PostgREST started on port 3001 (PID: $POSTGREST_PID)"
 else

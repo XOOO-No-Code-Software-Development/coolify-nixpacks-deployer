@@ -32,6 +32,14 @@ cmds = [
 
 [phases.build]
 cmds = [
-  # Build Next.js if package.json exists
-  "if [ -f package.json ]; then echo '🔨 Building Next.js app...' && npm run build; fi",
+  # Build Next.js if package.json exists and has build script
+  '''if [ -f package.json ] && grep -q '"build"' package.json; then 
+    echo '🔨 Building Next.js app...'
+    npm run build || {
+      echo '❌ Build failed, but continuing...'
+      echo 'Next.js will run in development mode'
+    }
+  else
+    echo '⚠️  No Next.js build script found'
+  fi''',
 ]
