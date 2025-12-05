@@ -133,18 +133,6 @@ if command -v jq &> /dev/null; then
       -exec rm -rf {} + 2>/dev/null || true
   fi
   
-  # Clean public folder contents but keep the folder
-  if [ -d "public" ]; then
-    echo "🧹 Cleaning public folder..."
-    find public -mindepth 1 -exec rm -rf {} + 2>/dev/null || true
-  fi
-  
-  # Clean styles folder contents but keep the folder
-  if [ -d "styles" ]; then
-    echo "🧹 Cleaning styles folder..."
-    find styles -mindepth 1 -exec rm -rf {} + 2>/dev/null || true
-  fi
-  
   # Extract and download files
   echo "📂 Downloading deployment files..."
   
