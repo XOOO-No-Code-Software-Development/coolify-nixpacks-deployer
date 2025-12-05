@@ -140,19 +140,18 @@ if command -v jq &> /dev/null; then
     
     # Download file in background
     (
-      # Download file content
-      FILE_CONTENT=$(curl -s \
-        -H "Authorization: Bearer $VERCEL_TOKEN" \
-        "$VERCEL_API_URL/v6/deployments/$DEPLOYMENT_ID/files/$uid")
-      
       # Create directory if needed
       filedir=$(dirname "$filename")
       if [ "$filedir" != "." ]; then
         mkdir -p "$filedir"
       fi
       
-      # Write file content
-      echo "$FILE_CONTENT" > "$filename"
+      # Download file content directly to file (preserves binary data)
+      curl -s \
+        -H "Authorization: Bearer $VERCEL_TOKEN" \
+        -o "$filename" \
+        "$VERCEL_API_URL/v6/deployments/$DEPLOYMENT_ID/files/$uid"
+      
       echo "✅ Downloaded: $filename"
     ) &
     
