@@ -141,6 +141,12 @@ if command -v jq &> /dev/null; then
       continue
     fi
     
+    # Skip components/ui files if they already exist
+    if [[ "$filename" == components/ui/* ]] && [ -f "$filename" ]; then
+      echo "⏭️  Skipped (exists): $filename"
+      continue
+    fi
+    
     # Download file in background
     (
       # Create directory if needed
