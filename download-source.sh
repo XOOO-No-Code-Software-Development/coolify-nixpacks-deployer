@@ -83,7 +83,12 @@ if command -v jq &> /dev/null; then
       else
         empty
       end;
-    .[] | walk_tree("")
+    # Skip the top-level "src" directory - start directly from its children
+    if .[0].name == "src" and .[0].children then
+      .[0].children[] | walk_tree("")
+    else
+      .[] | walk_tree("")
+    end
   ' | jq -s '.')
   
   # Count total files
