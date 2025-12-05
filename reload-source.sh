@@ -102,7 +102,7 @@ if command -v jq &> /dev/null; then
   pkill -f "next dev" || true
   sleep 2
   
-  # Clean existing files (preserve system files and node_modules)
+  # Clean existing files (preserve system files, node_modules, and specific folders)
   echo "🧹 Removing old deployment files..."
   find . -mindepth 1 -maxdepth 1 \
     ! -name 'reload-source.sh' \
@@ -118,8 +118,32 @@ if command -v jq &> /dev/null; then
     ! -name 'base-image' \
     ! -name 'empty_template' \
     ! -name 'node_modules' \
+    ! -name 'components' \
+    ! -name 'public' \
+    ! -name 'styles' \
+    ! -name 'package.json' \
     ! -name 'test-*.sh' \
     -exec rm -rf {} + 2>/dev/null || true
+  
+  # Clean components folder but preserve components/ui
+  if [ -d "components" ]; then
+    echo "🧹 Cleaning components folder (preserving ui)..."
+    find components -mindepth 1 -maxdepth 1 \
+      ! -name 'ui' \
+      -exec rm -rf {} + 2>/dev/null || true
+  fi
+  
+  # Clean public folder contents but keep the folder
+  if [ -d "public" ]; then
+    echo "🧹 Cleaning public folder..."
+    find public -mindepth 1 -exec rm -rf {} + 2>/dev/null || true
+  fi
+  
+  # Clean styles folder contents but keep the folder
+  if [ -d "styles" ]; then
+    echo "🧹 Cleaning styles folder..."
+    find styles -mindepth 1 -exec rm -rf {} + 2>/dev/null || true
+  fi
   
   # Extract and download files
   echo "📂 Downloading deployment files..."
@@ -143,6 +167,24 @@ if command -v jq &> /dev/null; then
     
     # Skip components/ui files if they already exist
     if [[ "$filename" == components/ui/* ]] && [ -f "$filename" ]; then
+      echo "⏭️  Skipped (exists): $filename"
+      continue
+    fi
+    
+    # Skip public folder files if they already exist
+    if [[ "$filename" == public/* ]] && [ -f "$filename" ]; then
+      echo "⏭️  Skipped (exists): $filename"
+      continue
+    fi
+    
+    # Skip styles folder files if they already exist
+    if [[ "$filename" == styles/* ]] && [ -f "$filename" ]; then
+      echo "⏭️  Skipped (exists): $filename"
+      continue
+    fi
+    
+    # Skip package.json if it already exists
+    if [[ "$filename" == "package.json" ]] && [ -f "$filename" ]; then
       echo "⏭️  Skipped (exists): $filename"
       continue
     fi
