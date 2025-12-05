@@ -69,8 +69,12 @@ if command -v jq &> /dev/null; then
         if .name == "pda" then
           empty
         else
-          # Build new path for children - path already has trailing /
-          (.children[] | walk_tree(if path == "" then (.name + "/") else (path + .name + "/") end))
+          # Capture current directory name before iterating children
+          . as $current |
+          # Build new path with current directory name
+          (if path == "" then ($current.name + "/") else (path + $current.name + "/") end) as $newpath |
+          # Recurse into each child with the new path
+          ($current.children[] | walk_tree($newpath))
         end
       else
         empty
