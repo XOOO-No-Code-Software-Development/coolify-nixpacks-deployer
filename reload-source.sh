@@ -196,9 +196,14 @@ if [ -f "package.json" ]; then
   npm install --silent
   echo "✅ Dependencies installed"
   
-  echo "🔨 Rebuilding Next.js app..."
-  npm run build
-  echo "✅ Build complete"
+  # Check if build script exists before running it
+  if npm run --silent 2>&1 | grep -q "build"; then
+    echo "🔨 Rebuilding Next.js app..."
+    npm run build
+    echo "✅ Build complete"
+  else
+    echo "⚠️  No build script found in package.json, skipping build"
+  fi
 fi
 
 # Reinstall Python dependencies if requirements.txt changed
