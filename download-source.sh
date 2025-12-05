@@ -151,10 +151,15 @@ if command -v jq &> /dev/null; then
         -H "Authorization: Bearer $VERCEL_TOKEN" \
         "$VERCEL_API_URL/v6/deployments/$DEPLOYMENT_ID/files/$uid")
       
-      # Extract base64 data and decode
-      echo "$FILE_RESPONSE" | jq -r '.data' | base64 -d > "$filename"
-      
-      echo "✅ Downloaded: $filename"
+      # Check if response contains data field
+      if echo "$FILE_RESPONSE" | jq -e '.data' > /dev/null 2>&1; then
+        # Extract base64 data and decode
+        echo "$FILE_RESPONSE" | jq -r '.data' | base64 -d > "$filename"
+        echo "✅ Downloaded: $filename"
+      else
+        echo "❌ Failed to download $filename: No .data field in response"
+        echo "Response: $(echo "$FILE_RESPONSE" | head -c 200)"
+      fi
     ) &
     
     # Store PID in file
