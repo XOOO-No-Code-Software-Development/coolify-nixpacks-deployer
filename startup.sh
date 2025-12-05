@@ -37,7 +37,7 @@ fi
 
 # Start System Reload Service (port 9000) - INDEPENDENT OF USER CODE
 echo "🔧 Starting System Reload Service on port 9000..."
-python3 reload-service.py 2>&1 | sed 's/^/[Reload Service] /' &
+python3 -u reload-service.py 2>&1 | sed -u 's/^/[Reload Service] /' &
 RELOAD_SERVICE_PID=$!
 echo "✅ Reload Service started (PID: $RELOAD_SERVICE_PID)"
 
@@ -84,7 +84,7 @@ if [ -d "backend" ] && [ -f "backend/main.py" ]; then
             
             echo "[FastAPI] Starting server..."
             cd backend
-            uvicorn main:app --host 0.0.0.0 --port 8000 2>&1 | sed 's/^/[FastAPI] /'
+            uvicorn main:app --host 0.0.0.0 --port 8000 2>&1 | sed -u 's/^/[FastAPI] /'
             cd ..
             echo "[FastAPI] Server stopped. Restarting in 2 seconds..."
             sleep 2
@@ -110,7 +110,7 @@ server-port = 3001
 EOF
     
     # Start PostgREST
-    /usr/local/bin/postgrest /tmp/postgrest.conf 2>&1 | sed 's/^/[PostgREST] /' &
+    /usr/local/bin/postgrest /tmp/postgrest.conf 2>&1 | sed -u 's/^/[PostgREST] /' &
     POSTGREST_PID=$!
     echo "✅ PostgREST started on port 3001 (PID: $POSTGREST_PID)"
 else
