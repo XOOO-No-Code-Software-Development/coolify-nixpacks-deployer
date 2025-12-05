@@ -193,6 +193,11 @@ if command -v jq &> /dev/null; then
       cp "$filename" "$filename.bak"
     fi
     
+    # Special handling for backend/requirements.txt - backup old version to detect changes
+    if [[ "$filename" == "backend/requirements.txt" ]] && [ -f "$filename" ]; then
+      cp "$filename" "$filename.bak"
+    fi
+    
     # Download file in background
     (
       # Create directory if needed
@@ -273,6 +278,18 @@ if command -v jq &> /dev/null; then
     PACKAGE_JSON_CHANGED=true
   fi
   
+  # Check if backend/requirements.txt changed by comparing with backup
+  REQUIREMENTS_TXT_CHANGED=false
+  if [ -f "backend/requirements.txt" ] && [ -f "backend/requirements.txt.bak" ]; then
+    if ! cmp -s "backend/requirements.txt" "backend/requirements.txt.bak"; then
+      REQUIREMENTS_TXT_CHANGED=true
+    fi
+    rm -f "backend/requirements.txt.bak"
+  elif [ -f "backend/requirements.txt" ] && [ ! -f "backend/requirements.txt.bak" ]; then
+    # No backup means this is first time, so consider it changed
+    REQUIREMENTS_TXT_CHANGED=true
+  fi
+  
   # Clean up temporary files
   rm -f "$PIDS_FILE" "$FILES_TO_PROCESS" "$DOWNLOAD_LOG" "$SKIP_LOG"
   
@@ -295,6 +312,19 @@ if [ "$PACKAGE_JSON_CHANGED" = true ]; then
   echo "✅ Dependencies installed"
 else
   echo "📦 Package.json unchanged - skipping npm install"
+fi
+
+echo ""
+
+# Install Python dependencies only if backend/requirements.txt changed
+if [ "$REQUIREMENTS_TXT_CHANGED" = true ]; then
+  echo "🐍 Requirements.txt changed - installing Python dependencies..."
+  cd backend
+  pip install --no-cache-dir -r requirements.txt
+  cd ..
+  echo "✅ Python dependencies installed"
+else
+  echo "🐍 Requirements.txt unchanged - skipping pip install"
 fi
 
 echo ""
