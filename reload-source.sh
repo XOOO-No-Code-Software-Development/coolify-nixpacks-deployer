@@ -197,8 +197,8 @@ if [ -f "package.json" ]; then
   npm install --silent
   echo "✅ Dependencies installed"
   
-  # Check if build script exists before running it
-  if npm run --silent 2>&1 | grep -q "build"; then
+  # Check if build script exists in package.json
+  if grep -q '"build"' package.json; then
     echo "🔨 Rebuilding Next.js app..."
     npm run build
     echo "✅ Build complete"
