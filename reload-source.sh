@@ -188,19 +188,19 @@ fi
 rm -f /tmp/files_response.json
 
 echo ""
-echo "✅ Reload complete!"
-echo ""
 
 # Reinstall dependencies if package.json changed
 if [ -f "package.json" ]; then
   echo "📦 Reinstalling Next.js dependencies..."
-  npm install --silent
+  npm install
   echo "✅ Dependencies installed"
   
   # Check if build script exists in package.json
   if grep -q '"build"' package.json; then
     echo "🔨 Rebuilding Next.js app..."
-    npm run build
+    npm run build || {
+      echo "❌ Build failed, Next.js will run in development mode"
+    }
     echo "✅ Build complete"
   else
     echo "⚠️  No build script found in package.json, skipping build"
@@ -213,10 +213,12 @@ if [ -f "backend/requirements.txt" ]; then
   if [ -d "/opt/venv" ]; then
     source /opt/venv/bin/activate
   fi
-  pip install -q -r backend/requirements.txt
+  pip install -r backend/requirements.txt
   echo "✅ Python dependencies installed"
 fi
 
+echo ""
+echo "✅ Reload complete!"
 echo "🔥 Services will auto-detect file changes and reload"
 echo ""
 echo "📋 Downloaded files:"
