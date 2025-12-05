@@ -268,12 +268,12 @@ if [ -f "package.json" ]; then
   echo "✅ Dependencies installed"
 fi
 
-# Next.js server will restart automatically via startup.sh loop
-echo "✅ Next.js server will restart automatically"
-rm -f /tmp/reload_in_progress  # Allow restart now
-
 echo ""
 echo "✅ Reload complete!"
 echo "🔥 Next.js will restart with updated code"
 echo ""
 echo "=================================================="
+
+# Remove lock file at the very end to allow Next.js restart
+# This ensures all our output is printed before Next.js floods the logs
+rm -f /tmp/reload_in_progress
