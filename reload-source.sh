@@ -100,6 +100,11 @@ if command -v jq &> /dev/null; then
   echo "🛑 Stopping Next.js server for reload..."
   touch /tmp/reload_in_progress  # Signal to startup.sh to not restart yet
   pkill -f "next dev" || true
+  
+  # Stop FastAPI backend if it's running
+  echo "🛑 Stopping FastAPI backend for reload..."
+  pkill -f "uvicorn main:app" || true
+  
   sleep 2
   
   # Clean existing files (preserve system files, node_modules, and specific folders)
@@ -294,7 +299,7 @@ fi
 
 echo ""
 echo "✅ Reload complete!"
-echo "🔥 Next.js will restart with updated code"
+echo "🔥 Next.js and FastAPI will restart with updated code"
 echo ""
 echo "=================================================="
 

@@ -74,11 +74,23 @@ if [ -d "backend" ] && [ -f "backend/main.py" ]; then
         source /opt/venv/bin/activate
     fi
     
-    # Start FastAPI without reload (we have our own reload service)
-    cd backend
-    uvicorn main:app --host 0.0.0.0 --port 8000 2>&1 | sed 's/^/[FastAPI] /' &
+    # Start FastAPI in a loop so it auto-restarts on reload (like Next.js)
+    (
+        while true; do
+            # Wait if reload is in progress
+            while [ -f /tmp/reload_in_progress ]; do
+                sleep 1
+            done
+            
+            echo "[FastAPI] Starting server..."
+            cd backend
+            uvicorn main:app --host 0.0.0.0 --port 8000 2>&1 | sed 's/^/[FastAPI] /'
+            cd ..
+            echo "[FastAPI] Server stopped. Restarting in 2 seconds..."
+            sleep 2
+        done
+    ) &
     UVICORN_PID=$!
-    cd ..
     echo "✅ Python Backend started on port 8000 (PID: $UVICORN_PID)"
 else
     echo "⚠️  backend/main.py not found, skipping Python backend startup"
