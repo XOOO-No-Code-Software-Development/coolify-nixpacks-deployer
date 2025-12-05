@@ -45,7 +45,8 @@ echo "✅ Reload Service started (PID: $RELOAD_SERVICE_PID)"
 echo "🎨 Starting Next.js Frontend..."
 if [ -f "package.json" ]; then
     echo "🔥 Starting Next.js in development mode with hot reload..."
-    PORT=3000 npm run dev 2>&1 | sed 's/^/[Next.js] /' &
+    # Disable output buffering for real-time logs
+    PORT=3000 NODE_ENV=development npm run dev 2>&1 | sed -u 's/^/[Next.js] /' &
     NEXTJS_PID=$!
     echo "✅ Next.js Frontend started in dev mode on port 3000 (PID: $NEXTJS_PID)"
 else
