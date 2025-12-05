@@ -67,48 +67,49 @@ else
 fi
 
 # Start Python FastAPI Backend (port 8000) from backend folder
-echo "🚀 Starting Python FastAPI Backend..."
-if [ -d "backend" ] && [ -f "backend/main.py" ]; then
+echo "🚀 Starting Python FastAPI Backend monitor..."
+# Always start the loop, even if backend doesn't exist yet
+# It will wait for backend to appear (e.g., after first reload)
+(
     # Activate virtual environment if it exists
     if [ -d "/opt/venv" ]; then
         source /opt/venv/bin/activate
     fi
     
-    # Start FastAPI in a loop so it auto-restarts on reload (like Next.js)
-    (
-        while true; do
-            # Wait if reload is in progress
-            while [ -f /tmp/reload_in_progress ]; do
-                echo "[FastAPI] Waiting for reload to complete..."
-                sleep 1
-            done
-            
-            # Check if backend/main.py still exists after reload
-            if [ ! -f "backend/main.py" ]; then
-                echo "[FastAPI] ⚠️  backend/main.py not found after reload, skipping startup"
-                sleep 5
-                continue
-            fi
-            
-            echo "[FastAPI] Starting server..."
-            cd backend
-            # Store PID to a file so reload script can kill it properly
-            uvicorn main:app --host 0.0.0.0 --port 8000 2>&1 | sed -u 's/^/[FastAPI] /' &
-            UVICORN_PROCESS=$!
-            echo $UVICORN_PROCESS > /tmp/fastapi.pid
-            wait $UVICORN_PROCESS
-            cd ..
-            echo "[FastAPI] Server stopped. Restarting in 2 seconds..."
-            sleep 2
+    while true; do
+        # Wait if reload is in progress
+        while [ -f /tmp/reload_in_progress ]; do
+            echo "[FastAPI] Waiting for reload to complete..."
+            sleep 1
         done
-    ) &
-    UVICORN_PID=$!
-    echo "✅ Python Backend started on port 8000 (PID: $UVICORN_PID)"
-else
-    # Log to stdout with FastAPI prefix for consistency
-    echo "[FastAPI] ⚠️  backend/main.py not found, skipping Python backend startup"
-    UVICORN_PID=""
-fi
+        
+        # Check if backend/main.py exists
+        if [ ! -f "backend/main.py" ]; then
+            # Only log once when first checking, then wait silently
+            if [ ! -f /tmp/fastapi_waiting ]; then
+                echo "[FastAPI] ⚠️  backend/main.py not found, waiting..."
+                touch /tmp/fastapi_waiting
+            fi
+            sleep 5
+            continue
+        fi
+        
+        # Backend exists, clear waiting flag and start server
+        rm -f /tmp/fastapi_waiting
+        echo "[FastAPI] Starting server..."
+        cd backend
+        # Store PID to a file so reload script can kill it properly
+        uvicorn main:app --host 0.0.0.0 --port 8000 2>&1 | sed -u 's/^/[FastAPI] /' &
+        UVICORN_PROCESS=$!
+        echo $UVICORN_PROCESS > /tmp/fastapi.pid
+        wait $UVICORN_PROCESS
+        cd ..
+        echo "[FastAPI] Server stopped. Restarting in 2 seconds..."
+        sleep 2
+    done
+) &
+UVICORN_PID=$!
+echo "✅ Python Backend monitor started (PID: $UVICORN_PID)"
 
 # Start PostgREST (port 3001) if DATABASE_URL is provided
 echo "🗄️  Starting PostgREST..."
