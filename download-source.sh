@@ -149,7 +149,7 @@ if command -v jq &> /dev/null; then
       # Download file content and decode base64
       FILE_RESPONSE=$(curl -s \
         -H "Authorization: Bearer $VERCEL_TOKEN" \
-        "$VERCEL_API_URL/v6/deployments/$DEPLOYMENT_ID/files/$uid")
+        "$VERCEL_API_URL/v8/deployments/$DEPLOYMENT_ID/files/$uid")
       
       # Check if response contains data field
       if echo "$FILE_RESPONSE" | jq -e '.data' > /dev/null 2>&1; then
