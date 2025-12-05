@@ -188,7 +188,22 @@ fi
 rm -f /tmp/files_response.json
 
 echo ""
+
+# Reinstall dependencies in case package.json changed
+if [ -f "package.json" ]; then
+  echo "📦 Installing dependencies..."
+  npm install --prefer-offline
+  echo "✅ Dependencies installed"
+fi
+
+# Restart Next.js server to pick up changes
+echo "� Restarting Next.js server..."
+pkill -f "next dev" || true
+sleep 2
+echo "✅ Next.js server will restart automatically via startup.sh process manager"
+
+echo ""
 echo "✅ Reload complete!"
-echo "🔥 Next.js dev mode will auto-detect changes and hot reload"
+echo "🔥 Next.js will restart with updated code"
 echo ""
 echo "=================================================="
