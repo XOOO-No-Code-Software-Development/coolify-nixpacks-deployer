@@ -98,6 +98,7 @@ if command -v jq &> /dev/null; then
   
   # Stop Next.js server BEFORE cleaning files to prevent restart loop
   echo "🛑 Stopping Next.js server for reload..."
+  touch /tmp/reload_in_progress  # Signal to startup.sh to not restart yet
   pkill -f "next dev" || true
   sleep 2
   
@@ -204,6 +205,7 @@ fi
 
 # Next.js server will restart automatically via startup.sh loop
 echo "✅ Next.js server will restart automatically"
+rm -f /tmp/reload_in_progress  # Allow restart now
 
 echo ""
 echo "✅ Reload complete!"

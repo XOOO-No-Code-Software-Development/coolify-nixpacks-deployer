@@ -48,6 +48,11 @@ if [ -f "package.json" ]; then
     # Start Next.js in a loop so it auto-restarts on reload
     (
         while true; do
+            # Wait if reload is in progress
+            while [ -f /tmp/reload_in_progress ]; do
+                sleep 1
+            done
+            
             echo "[Next.js] Starting server..."
             PORT=3000 NODE_ENV=development npm run dev 2>&1 | sed -u 's/^/[Next.js] /'
             echo "[Next.js] Server stopped. Restarting in 2 seconds..."
