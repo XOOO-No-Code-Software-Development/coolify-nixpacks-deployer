@@ -140,6 +140,7 @@ if command -v jq &> /dev/null; then
   PIDS_FILE=$(mktemp)
   FILES_TO_PROCESS=$(mktemp)
   DOWNLOAD_LOG=$(mktemp)
+  SKIP_LOG=$(mktemp)
   
   # Save files list to temp file
   echo "$FILES_LIST" | jq -r '.[] | @json' > "$FILES_TO_PROCESS"
@@ -163,28 +164,28 @@ if command -v jq &> /dev/null; then
     
     # Skip components/ui files if they already exist
     if [[ "$filename" == components/ui/* ]] && [ -f "$filename" ]; then
-      echo "⏭️  Skipped (exists): $filename"
+      echo "$filename" >> "$SKIP_LOG"
       SKIPPED_FILES=$((SKIPPED_FILES + 1))
       continue
     fi
     
     # Skip public folder files if they already exist
     if [[ "$filename" == public/* ]] && [ -f "$filename" ]; then
-      echo "⏭️  Skipped (exists): $filename"
+      echo "$filename" >> "$SKIP_LOG"
       SKIPPED_FILES=$((SKIPPED_FILES + 1))
       continue
     fi
     
     # Skip styles folder files if they already exist
     if [[ "$filename" == styles/* ]] && [ -f "$filename" ]; then
-      echo "⏭️  Skipped (exists): $filename"
+      echo "$filename" >> "$SKIP_LOG"
       SKIPPED_FILES=$((SKIPPED_FILES + 1))
       continue
     fi
     
     # Skip package.json if it already exists
     if [[ "$filename" == "package.json" ]] && [ -f "$filename" ]; then
-      echo "⏭️  Skipped (exists): $filename"
+      echo "$filename" >> "$SKIP_LOG"
       SKIPPED_FILES=$((SKIPPED_FILES + 1))
       continue
     fi
@@ -239,6 +240,17 @@ if command -v jq &> /dev/null; then
   echo "   Downloaded: $DOWNLOADED_FILES"
   echo ""
   
+  # Display skipped files if any
+  if [ -f "$SKIP_LOG" ] && [ -s "$SKIP_LOG" ]; then
+    echo "⏭️  Skipped files (already exist):"
+    cat "$SKIP_LOG" | head -n 10
+    SKIP_COUNT=$(wc -l < "$SKIP_LOG")
+    if [ "$SKIP_COUNT" -gt 10 ]; then
+      echo "   ... and $((SKIP_COUNT - 10)) more"
+    fi
+    echo ""
+  fi
+  
   # Display download log if it exists and has content
   if [ -f "$DOWNLOAD_LOG" ] && [ -s "$DOWNLOAD_LOG" ]; then
     echo "📥 Downloaded files:"
@@ -247,7 +259,7 @@ if command -v jq &> /dev/null; then
   fi
   
   # Clean up temporary files
-  rm -f "$PIDS_FILE" "$FILES_TO_PROCESS" "$DOWNLOAD_LOG"
+  rm -f "$PIDS_FILE" "$FILES_TO_PROCESS" "$DOWNLOAD_LOG" "$SKIP_LOG"
   
   echo "✅ All files processed successfully!"
 else
