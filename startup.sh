@@ -93,7 +93,8 @@ if [ -d "backend" ] && [ -f "backend/main.py" ]; then
     UVICORN_PID=$!
     echo "✅ Python Backend started on port 8000 (PID: $UVICORN_PID)"
 else
-    echo "⚠️  backend/main.py not found, skipping Python backend startup"
+    # Log to stdout with FastAPI prefix for consistency
+    echo "[FastAPI] ⚠️  backend/main.py not found, skipping Python backend startup"
     UVICORN_PID=""
 fi
 
