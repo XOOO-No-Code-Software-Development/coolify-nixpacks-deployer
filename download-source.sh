@@ -39,7 +39,7 @@ echo ""
 echo "⬇️  Fetching deployment file list..."
 FILES_RESPONSE=$(curl -s -w "HTTP_STATUS:%{http_code}" \
   -H "Authorization: Bearer $VERCEL_TOKEN" \
-  "$VERCEL_API_URL/v6/deployments/$DEPLOYMENT_ID/files")
+  "$VERCEL_API_URL/v8/deployments/$DEPLOYMENT_ID/files")
 
 # Extract HTTP status
 HTTP_STATUS=$(echo "$FILES_RESPONSE" | grep -o "HTTP_STATUS:[0-9]*" | cut -d: -f2)
@@ -146,11 +146,13 @@ if command -v jq &> /dev/null; then
         mkdir -p "$filedir"
       fi
       
-      # Download file content directly to file (preserves binary data)
-      curl -s \
+      # Download file content and decode base64
+      FILE_RESPONSE=$(curl -s \
         -H "Authorization: Bearer $VERCEL_TOKEN" \
-        -o "$filename" \
-        "$VERCEL_API_URL/v6/deployments/$DEPLOYMENT_ID/files/$uid"
+        "$VERCEL_API_URL/v6/deployments/$DEPLOYMENT_ID/files/$uid")
+      
+      # Extract base64 data and decode
+      echo "$FILE_RESPONSE" | jq -r '.data' | base64 -d > "$filename"
       
       echo "✅ Downloaded: $filename"
     ) &
