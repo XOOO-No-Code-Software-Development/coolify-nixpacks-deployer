@@ -183,11 +183,9 @@ if command -v jq &> /dev/null; then
       continue
     fi
     
-    # Skip package.json if it already exists
+    # Special handling for package.json - backup old version to detect changes
     if [[ "$filename" == "package.json" ]] && [ -f "$filename" ]; then
-      echo "$filename" >> "$SKIP_LOG"
-      SKIPPED_FILES=$((SKIPPED_FILES + 1))
-      continue
+      cp "$filename" "$filename.bak"
     fi
     
     # Download file in background
@@ -258,6 +256,18 @@ if command -v jq &> /dev/null; then
     echo ""
   fi
   
+  # Check if package.json actually changed by comparing with backup
+  PACKAGE_JSON_CHANGED=false
+  if [ -f "package.json" ] && [ -f "package.json.bak" ]; then
+    if ! cmp -s "package.json" "package.json.bak"; then
+      PACKAGE_JSON_CHANGED=true
+    fi
+    rm -f "package.json.bak"
+  elif [ -f "package.json" ] && [ ! -f "package.json.bak" ]; then
+    # No backup means this is first time, so consider it changed
+    PACKAGE_JSON_CHANGED=true
+  fi
+  
   # Clean up temporary files
   rm -f "$PIDS_FILE" "$FILES_TO_PROCESS" "$DOWNLOAD_LOG" "$SKIP_LOG"
   
@@ -273,11 +283,13 @@ rm -f /tmp/files_response.json
 
 echo ""
 
-# Reinstall dependencies in case package.json changed
-if [ -f "package.json" ]; then
-  echo "📦 Installing dependencies..."
+# Reinstall dependencies only if package.json changed
+if [ "$PACKAGE_JSON_CHANGED" = true ]; then
+  echo "📦 Package.json changed - installing dependencies..."
   npm install --prefer-offline
   echo "✅ Dependencies installed"
+else
+  echo "📦 Package.json unchanged - skipping npm install"
 fi
 
 echo ""
