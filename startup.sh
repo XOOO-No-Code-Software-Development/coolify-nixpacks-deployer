@@ -44,18 +44,10 @@ echo "✅ Reload Service started (PID: $RELOAD_SERVICE_PID)"
 # Start Next.js Frontend (port 3000) from root directory
 echo "🎨 Starting Next.js Frontend..."
 if [ -f "package.json" ]; then
-    # Check if .next directory exists (production build)
-    if [ -d ".next" ]; then
-        echo "✅ Production build found, starting Next.js in production mode..."
-        PORT=3000 npm run start 2>&1 | sed 's/^/[Next.js] /' &
-        NEXTJS_PID=$!
-        echo "✅ Next.js Frontend started on port 3000 (PID: $NEXTJS_PID)"
-    else
-        echo "⚠️  .next directory not found, starting in development mode..."
-        PORT=3000 npm run dev 2>&1 | sed 's/^/[Next.js] /' &
-        NEXTJS_PID=$!
-        echo "✅ Next.js Frontend started in dev mode on port 3000 (PID: $NEXTJS_PID)"
-    fi
+    echo "🔥 Starting Next.js in development mode with hot reload..."
+    PORT=3000 npm run dev 2>&1 | sed 's/^/[Next.js] /' &
+    NEXTJS_PID=$!
+    echo "✅ Next.js Frontend started in dev mode on port 3000 (PID: $NEXTJS_PID)"
 else
     echo "⚠️  package.json not found, skipping Next.js startup"
     NEXTJS_PID=""
