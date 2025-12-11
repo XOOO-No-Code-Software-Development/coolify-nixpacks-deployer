@@ -102,14 +102,23 @@ echo "🚀 Starting Python FastAPI Backend monitor..."
         rm -f /tmp/fastapi_waiting
         echo "[BACKEND] Starting server..."
         cd backend
-        # Store PID to a file so reload script can kill it properly
-        uvicorn main:app --host 0.0.0.0 --port 8000 2>&1 | sed -u 's/^/[BACKEND] /' &
-        UVICORN_PROCESS=$!
-        echo $UVICORN_PROCESS > /tmp/fastapi.pid
         
-        # Wait for the process and clean up PID file when it exits
-        wait $UVICORN_PROCESS
+        # Start uvicorn in background and capture its PID
+        # Redirect to a file, then tail it with prefix in a separate process
+        uvicorn main:app --host 0.0.0.0 --port 8000 > /tmp/uvicorn.log 2>&1 &
+        UVICORN_PID=$!
+        echo $UVICORN_PID > /tmp/fastapi.pid
+        
+        # Tail the log file and add prefix
+        tail -f /tmp/uvicorn.log 2>/dev/null | sed -u 's/^/[BACKEND] /' &
+        TAIL_PID=$!
+        
+        # Wait for uvicorn to exit
+        wait $UVICORN_PID 2>/dev/null || true
         EXIT_CODE=$?
+        
+        # Clean up
+        kill $TAIL_PID 2>/dev/null || true
         rm -f /tmp/fastapi.pid
         
         cd ..
