@@ -79,7 +79,7 @@ echo "🚀 Starting Python FastAPI Backend monitor..."
     while true; do
         # Wait if reload is in progress
         while [ -f /tmp/reload_in_progress ]; do
-            echo "[FastAPI] Waiting for reload to complete..."
+            echo "[BACKEND] Waiting for reload to complete..."
             sleep 1
         done
         
@@ -87,7 +87,7 @@ echo "🚀 Starting Python FastAPI Backend monitor..."
         if [ ! -f "backend/main.py" ]; then
             # Only log once when first checking, then wait silently
             if [ ! -f /tmp/fastapi_waiting ]; then
-                echo "[FastAPI] ⚠️  backend/main.py not found, waiting..."
+                echo "[BACKEND] ⚠️  backend/main.py not found, waiting..."
                 touch /tmp/fastapi_waiting
             fi
             sleep 5
@@ -96,15 +96,15 @@ echo "🚀 Starting Python FastAPI Backend monitor..."
         
         # Backend exists, clear waiting flag and start server
         rm -f /tmp/fastapi_waiting
-        echo "[FastAPI] Starting server..."
+        echo "[BACKEND] Starting server..."
         cd backend
         # Store PID to a file so reload script can kill it properly
-        uvicorn main:app --host 0.0.0.0 --port 8000 2>&1 | sed -u 's/^/[FastAPI] /' &
+        uvicorn main:app --host 0.0.0.0 --port 8000 2>&1 | sed -u 's/^/[BACKEND] /' &
         UVICORN_PROCESS=$!
         echo $UVICORN_PROCESS > /tmp/fastapi.pid
         wait $UVICORN_PROCESS
         cd ..
-        echo "[FastAPI] Server stopped. Restarting in 2 seconds..."
+        echo "[BACKEND] Server stopped. Restarting in 2 seconds..."
         sleep 2
     done
 ) &

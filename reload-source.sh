@@ -101,11 +101,11 @@ if command -v jq &> /dev/null; then
   touch /tmp/reload_in_progress  # Signal to startup.sh to not restart yet
   pkill -f "next dev" || true
   
-  # Stop FastAPI backend if it's running (using PID file for precision)
-  echo "🛑 Stopping FastAPI backend for reload..."
+  # Stop Backend if it's running (using PID file for precision)
+  echo "🛑 Stopping Backend for reload..."
   if [ -f /tmp/fastapi.pid ]; then
-    FASTAPI_PID=$(cat /tmp/fastapi.pid)
-    kill $FASTAPI_PID 2>/dev/null || true
+    BACKEND_PID=$(cat /tmp/fastapi.pid)
+    kill $BACKEND_PID 2>/dev/null || true
     rm -f /tmp/fastapi.pid
   else
     # Fallback to pkill if PID file doesn't exist
@@ -342,7 +342,7 @@ fi
 
 echo ""
 echo "✅ Reload complete!"
-echo "🔥 Next.js and FastAPI will restart with updated code"
+echo "🔥 Next.js and Backend will restart with updated code"
 echo ""
 echo "=================================================="
 
