@@ -106,9 +106,14 @@ echo "🚀 Starting Python FastAPI Backend monitor..."
         uvicorn main:app --host 0.0.0.0 --port 8000 2>&1 | sed -u 's/^/[BACKEND] /' &
         UVICORN_PROCESS=$!
         echo $UVICORN_PROCESS > /tmp/fastapi.pid
+        
+        # Wait for the process and clean up PID file when it exits
         wait $UVICORN_PROCESS
+        EXIT_CODE=$?
+        rm -f /tmp/fastapi.pid
+        
         cd ..
-        echo "[BACKEND] Server stopped. Restarting in 2 seconds..."
+        echo "[BACKEND] Server stopped (exit code: $EXIT_CODE). Restarting in 2 seconds..."
         sleep 2
     done
 ) &

@@ -105,11 +105,15 @@ if command -v jq &> /dev/null; then
   echo "🛑 Stopping Backend for reload..."
   if [ -f /tmp/fastapi.pid ]; then
     BACKEND_PID=$(cat /tmp/fastapi.pid)
-    kill $BACKEND_PID 2>/dev/null || true
+    if kill -0 $BACKEND_PID 2>/dev/null; then
+      echo "   Killing backend process $BACKEND_PID"
+      kill $BACKEND_PID 2>/dev/null || true
+    else
+      echo "   Backend process $BACKEND_PID not running"
+    fi
     rm -f /tmp/fastapi.pid
   else
-    # Fallback to pkill if PID file doesn't exist
-    pkill -f "uvicorn main:app" || true
+    echo "   No PID file found, backend may not be running"
   fi
   
   sleep 2
