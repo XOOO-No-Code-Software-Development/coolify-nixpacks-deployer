@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Increase file descriptor limit for Next.js/Turbopack file watching
+# Default is often 1024, which is too low for large projects
+ulimit -n 65536 || echo "⚠️  Could not increase file descriptor limit"
+
 # Function to handle shutdown
 shutdown() {
     echo "Shutting down services..."
