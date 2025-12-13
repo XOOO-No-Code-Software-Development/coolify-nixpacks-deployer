@@ -45,31 +45,6 @@ python3 -u reload-service.py 2>&1 | sed -u 's/^/[Reload Service] /' &
 RELOAD_SERVICE_PID=$!
 echo "✅ Reload Service started (PID: $RELOAD_SERVICE_PID)"
 
-# Start Next.js Frontend (port 3000) from root directory
-echo "🎨 Starting Next.js Frontend..."
-if [ -f "package.json" ]; then
-    echo "🔥 Starting Next.js in development mode with hot reload..."
-    # Start Next.js in a loop so it auto-restarts on reload
-    (
-        while true; do
-            # Wait if reload is in progress
-            while [ -f /tmp/reload_in_progress ]; do
-                sleep 1
-            done
-            
-            echo "[Next.js] Starting server..."
-            PORT=3000 NODE_ENV= npm run dev 2>&1 | sed -u 's/^/[Next.js] /'
-            echo "[Next.js] Server stopped. Restarting in 2 seconds..."
-            sleep 2
-        done
-    ) &
-    NEXTJS_PID=$!
-    echo "✅ Next.js Frontend started in dev mode on port 3000 (PID: $NEXTJS_PID)"
-else
-    echo "⚠️  package.json not found, skipping Next.js startup"
-    NEXTJS_PID=""
-fi
-
 # Start Python FastAPI Backend (port 8000) from backend folder
 echo "🚀 Starting Python FastAPI Backend monitor..."
 # Always start the loop, even if backend doesn't exist yet
@@ -128,6 +103,48 @@ echo "🚀 Starting Python FastAPI Backend monitor..."
 ) &
 UVICORN_PID=$!
 echo "✅ Python Backend monitor started (PID: $UVICORN_PID)"
+
+# Wait for backend to be ready on port 8000
+echo "⏳ Waiting for backend to start on port 8000..."
+BACKEND_WAIT_COUNT=0
+BACKEND_MAX_WAIT=60
+while [ $BACKEND_WAIT_COUNT -lt $BACKEND_MAX_WAIT ]; do
+    if nc -z localhost 8000 2>/dev/null || curl -s http://localhost:8000 >/dev/null 2>&1; then
+        echo "✅ Backend is ready!"
+        break
+    fi
+    sleep 1
+    BACKEND_WAIT_COUNT=$((BACKEND_WAIT_COUNT + 1))
+done
+
+if [ $BACKEND_WAIT_COUNT -eq $BACKEND_MAX_WAIT ]; then
+    echo "⚠️  Backend did not start within ${BACKEND_MAX_WAIT} seconds, continuing anyway..."
+fi
+
+# Start Next.js Frontend (port 3000) from root directory
+echo "🎨 Starting Next.js Frontend..."
+if [ -f "package.json" ]; then
+    echo "🔥 Starting Next.js in development mode with hot reload..."
+    # Start Next.js in a loop so it auto-restarts on reload
+    (
+        while true; do
+            # Wait if reload is in progress
+            while [ -f /tmp/reload_in_progress ]; do
+                sleep 1
+            done
+            
+            echo "[Next.js] Starting server..."
+            PORT=3000 NODE_ENV= npm run dev 2>&1 | sed -u 's/^/[Next.js] /'
+            echo "[Next.js] Server stopped. Restarting in 2 seconds..."
+            sleep 2
+        done
+    ) &
+    NEXTJS_PID=$!
+    echo "✅ Next.js Frontend started in dev mode on port 3000 (PID: $NEXTJS_PID)"
+else
+    echo "⚠️  package.json not found, skipping Next.js startup"
+    NEXTJS_PID=""
+fi
 
 # Start PostgREST (port 3001) if DATABASE_URL is provided
 echo "🗄️  Starting PostgREST..."
