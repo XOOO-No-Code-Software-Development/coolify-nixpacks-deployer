@@ -58,7 +58,7 @@ if [ -f "package.json" ]; then
             done
             
             echo "[Next.js] Starting server..."
-            PORT=3000 NODE_ENV=development npm run dev 2>&1 | sed -u 's/^/[Next.js] /'
+            PORT=3000 NODE_ENV= npm run dev 2>&1 | sed -u 's/^/[Next.js] /'
             echo "[Next.js] Server stopped. Restarting in 2 seconds..."
             sleep 2
         done
