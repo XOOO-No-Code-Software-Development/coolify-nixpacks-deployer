@@ -77,15 +77,6 @@ Or include `nixpacks.toml` in your source zip.
 
 ## Troubleshooting
 
-**"Too many open files" error (Next.js/Turbopack)**
-```
-FATAL: An unexpected Turbopack error occurred
-Error: Too many open files (os error 24)
-```
-- Add to Coolify Docker run arguments: `--ulimit nofile=65536:65536`
-- See [ULIMIT-FIX.md](./ULIMIT-FIX.md) for detailed instructions
-- Required for Next.js development mode with Turbopack file watching
-
 **"SOURCE_URL not set"**
 - Ensure SOURCE_URL is added as **build-time** environment variable
 

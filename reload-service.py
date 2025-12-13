@@ -40,13 +40,11 @@ class ReloadHandler(BaseHTTPRequestHandler):
         print(f"[Reload Service] 🔄 Reloading project={project_id}, chat={chat_id}, deployment={deployment_id}")
         
         # Execute reload script with real-time output streaming
-        # Pass current environment variables (including VERCEL_TOKEN)
         try:
             result = subprocess.run(
                 ['bash', 'reload-source.sh', project_id, chat_id, deployment_id],
                 timeout=60,
-                cwd=os.path.dirname(os.path.abspath(__file__)),
-                env=os.environ.copy()
+                cwd=os.path.dirname(os.path.abspath(__file__))
             )
             
             response = {
