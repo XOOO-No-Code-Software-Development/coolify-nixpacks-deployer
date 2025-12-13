@@ -4,22 +4,31 @@
 echo "📊 Current file descriptor limits:"
 echo "   Soft limit: $(ulimit -Sn)"
 echo "   Hard limit: $(ulimit -Hn)"
+echo "   Process limit: $(cat /proc/sys/fs/file-max 2>/dev/null || echo 'N/A')"
+echo "   Current open files: $(cat /proc/sys/fs/file-nr 2>/dev/null || echo 'N/A')"
 
-# Increase file descriptor limit for Next.js/Turbopack file watching
-# Default is often 1024, which is too low for large projects
-echo "🔧 Attempting to increase file descriptor limit to 65536..."
-ulimit -n 65536 2>/dev/null
+# Try multiple methods to increase file descriptor limit
+echo "🔧 Attempting to increase file descriptor limit..."
 
-# Check if successful, try with sudo if not
-if [ $? -ne 0 ]; then
-    echo "⚠️  Failed to set to 65536, trying with sudo..."
-    sudo prlimit --pid $$ --nofile=65536:65536 2>/dev/null
+# Method 1: Standard ulimit
+ulimit -Sn 65536 2>/dev/null && echo "✅ Set soft limit to 65536"
+ulimit -Hn 65536 2>/dev/null && echo "✅ Set hard limit to 65536"
+
+# Method 2: Try with sudo prlimit
+if command -v prlimit >/dev/null 2>&1; then
+    sudo prlimit --pid $$ --nofile=65536:65536 2>/dev/null && echo "✅ Set limits via prlimit"
+fi
+
+# Method 3: Apply sysctl settings if available
+if [ -f /etc/sysctl.conf ]; then
+    sudo sysctl -p /etc/sysctl.conf 2>/dev/null
 fi
 
 # Display new limits
 echo "📊 New file descriptor limits:"
 echo "   Soft limit: $(ulimit -Sn)"
 echo "   Hard limit: $(ulimit -Hn)"
+echo "   Process limit: $(cat /proc/sys/fs/file-max 2>/dev/null || echo 'N/A')"
 echo ""
 
 # Function to handle shutdown
