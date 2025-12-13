@@ -6,6 +6,7 @@ echo "   Soft limit: $(ulimit -Sn)"
 echo "   Hard limit: $(ulimit -Hn)"
 echo "   Process limit: $(cat /proc/sys/fs/file-max 2>/dev/null || echo 'N/A')"
 echo "   Current open files: $(cat /proc/sys/fs/file-nr 2>/dev/null || echo 'N/A')"
+echo "   PID 1 limits: $(cat /proc/1/limits 2>/dev/null | grep 'open files' || echo 'N/A')"
 
 # Try multiple methods to increase file descriptor limit
 echo "🔧 Attempting to increase file descriptor limit..."
@@ -154,6 +155,10 @@ if [ -f "package.json" ]; then
     echo "🔥 Starting Next.js in development mode with hot reload..."
     # Start Next.js in a loop so it auto-restarts on reload
     (
+        # Set file descriptor limit for this subshell
+        ulimit -Sn 65536 2>/dev/null
+        ulimit -Hn 65536 2>/dev/null
+        
         while true; do
             # Wait if reload is in progress
             while [ -f /tmp/reload_in_progress ]; do
@@ -161,7 +166,15 @@ if [ -f "package.json" ]; then
             done
             
             echo "[Next.js] Starting server..."
-            PORT=3000 NODE_ENV= npm run dev 2>&1 | sed -u 's/^/[Next.js] /'
+            echo "[Next.js] Process limits - Soft: $(ulimit -Sn), Hard: $(ulimit -Hn)"
+            
+            # Start with explicit file descriptor limit using prlimit if available
+            if command -v prlimit >/dev/null 2>&1; then
+                prlimit --nofile=65536:65536 -- bash -c "PORT=3000 NODE_ENV= npm run dev 2>&1" | sed -u 's/^/[Next.js] /'
+            else
+                PORT=3000 NODE_ENV= npm run dev 2>&1 | sed -u 's/^/[Next.js] /'
+            fi
+            
             echo "[Next.js] Server stopped. Restarting in 2 seconds..."
             sleep 2
         done
