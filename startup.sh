@@ -52,28 +52,27 @@ if [ -f "package.json" ]; then
             done
             
             echo "[Next.js] Starting server..."
-            PORT=3000 NODE_ENV= npm run dev 2>&1 | sed -u 's/^/[Next.js] /' &
-            NEXTJS_PROC=$!
             
-            # Wait for the process to finish
-            wait $NEXTJS_PROC
-            EXIT_CODE=$?
-            
-            # Check if there are any Turbopack panic logs
-            if [ $EXIT_CODE -ne 0 ]; then
-                echo "[Next.js] Process exited with code $EXIT_CODE"
+            # Capture output and look for panic log mentions
+            PORT=3000 NODE_ENV= npm run dev 2>&1 | while IFS= read -r line; do
+                echo "[Next.js] $line"
                 
-                # Look for panic logs
-                PANIC_LOGS=$(ls -t /tmp/next-panic-*.log 2>/dev/null | head -1)
-                if [ -n "$PANIC_LOGS" ]; then
-                    echo "[Next.js] =========================================="
-                    echo "[Next.js] 🔥 TURBOPACK PANIC LOG DETECTED:"
-                    echo "[Next.js] 📄 File: $PANIC_LOGS"
-                    echo "[Next.js] =========================================="
-                    cat "$PANIC_LOGS" | sed -u 's/^/[Next.js] /'
-                    echo "[Next.js] =========================================="
+                # Check if this line mentions a panic log
+                if [[ "$line" =~ /tmp/next-panic-.*\.log ]]; then
+                    # Extract the log file path
+                    PANIC_LOG=$(echo "$line" | grep -oP '/tmp/next-panic-[a-f0-9]+\.log' | head -1)
+                    if [ -n "$PANIC_LOG" ] && [ -f "$PANIC_LOG" ]; then
+                        # Give it a moment to finish writing
+                        sleep 0.5
+                        echo "[Next.js] =========================================="
+                        echo "[Next.js] 🔥 TURBOPACK PANIC LOG DETECTED:"
+                        echo "[Next.js] 📄 File: $PANIC_LOG"
+                        echo "[Next.js] =========================================="
+                        cat "$PANIC_LOG" | sed 's/^/[Next.js] /'
+                        echo "[Next.js] =========================================="
+                    fi
                 fi
-            fi
+            done
             
             echo "[Next.js] Server stopped. Restarting in 2 seconds..."
             sleep 2
