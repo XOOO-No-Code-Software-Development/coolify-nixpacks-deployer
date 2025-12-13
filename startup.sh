@@ -52,7 +52,29 @@ if [ -f "package.json" ]; then
             done
             
             echo "[Next.js] Starting server..."
-            PORT=3000 NODE_ENV= npm run dev 2>&1 | sed -u 's/^/[Next.js] /'
+            PORT=3000 NODE_ENV= npm run dev 2>&1 | sed -u 's/^/[Next.js] /' &
+            NEXTJS_PROC=$!
+            
+            # Wait for the process to finish
+            wait $NEXTJS_PROC
+            EXIT_CODE=$?
+            
+            # Check if there are any Turbopack panic logs
+            if [ $EXIT_CODE -ne 0 ]; then
+                echo "[Next.js] Process exited with code $EXIT_CODE"
+                
+                # Look for panic logs
+                PANIC_LOGS=$(ls -t /tmp/next-panic-*.log 2>/dev/null | head -1)
+                if [ -n "$PANIC_LOGS" ]; then
+                    echo "[Next.js] =========================================="
+                    echo "[Next.js] 🔥 TURBOPACK PANIC LOG DETECTED:"
+                    echo "[Next.js] 📄 File: $PANIC_LOGS"
+                    echo "[Next.js] =========================================="
+                    cat "$PANIC_LOGS" | sed -u 's/^/[Next.js] /'
+                    echo "[Next.js] =========================================="
+                fi
+            fi
+            
             echo "[Next.js] Server stopped. Restarting in 2 seconds..."
             sleep 2
         done
