@@ -1,8 +1,26 @@
 #!/bin/bash
 
+# Display current file descriptor limits
+echo "📊 Current file descriptor limits:"
+echo "   Soft limit: $(ulimit -Sn)"
+echo "   Hard limit: $(ulimit -Hn)"
+
 # Increase file descriptor limit for Next.js/Turbopack file watching
 # Default is often 1024, which is too low for large projects
-ulimit -n 65536 || echo "⚠️  Could not increase file descriptor limit"
+echo "🔧 Attempting to increase file descriptor limit to 65536..."
+ulimit -n 65536 2>/dev/null
+
+# Check if successful, try with sudo if not
+if [ $? -ne 0 ]; then
+    echo "⚠️  Failed to set to 65536, trying with sudo..."
+    sudo prlimit --pid $$ --nofile=65536:65536 2>/dev/null
+fi
+
+# Display new limits
+echo "📊 New file descriptor limits:"
+echo "   Soft limit: $(ulimit -Sn)"
+echo "   Hard limit: $(ulimit -Hn)"
+echo ""
 
 # Function to handle shutdown
 shutdown() {

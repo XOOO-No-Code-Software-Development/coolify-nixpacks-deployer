@@ -53,6 +53,17 @@ RUN sudo apt-get update && \
     sudo ldconfig
 
 # ============================================
+# LAYER 2.5: Configure system limits for file descriptors
+# ============================================
+RUN echo "* soft nofile 65536" | sudo tee -a /etc/security/limits.conf && \
+    echo "* hard nofile 65536" | sudo tee -a /etc/security/limits.conf && \
+    echo "root soft nofile 65536" | sudo tee -a /etc/security/limits.conf && \
+    echo "root hard nofile 65536" | sudo tee -a /etc/security/limits.conf && \
+    echo "fs.file-max = 2097152" | sudo tee -a /etc/sysctl.conf && \
+    echo "fs.inotify.max_user_watches = 524288" | sudo tee -a /etc/sysctl.conf && \
+    echo "fs.inotify.max_user_instances = 512" | sudo tee -a /etc/sysctl.conf
+
+# ============================================
 # LAYER 3: Set Python environment variables
 # ============================================
 ENV PYTHONUNBUFFERED=1 \
