@@ -3,6 +3,8 @@
 # Function to handle shutdown
 shutdown() {
     echo "Shutting down services..."
+    kill $RELOAD_SERVICE_PID $NEXTJS_PID $UVICORN_PID $POSTGREST_PID 2>/dev/null
+    wait $RELOAD_SERVICE_PID $NEXTJS_PID $UVICORN_PID $POSTGREST_PID 2>/dev/null
     exit 0
 }
 
@@ -33,11 +35,11 @@ if [ ! -f "package.json" ]; then
   fi
 fi
 
-# # Start System Reload Service (port 9000) - INDEPENDENT OF USER CODE
-# echo "🔧 Starting System Reload Service on port 9000..."
-# python3 -u reload-service.py 2>&1 | sed -u 's/^/[Reload Service] /' &
-# RELOAD_SERVICE_PID=$!
-# echo "✅ Reload Service started (PID: $RELOAD_SERVICE_PID)"
+# Start System Reload Service (port 9000) - INDEPENDENT OF USER CODE
+echo "🔧 Starting System Reload Service on port 9000..."
+python3 -u reload-service.py 2>&1 | sed -u 's/^/[Reload Service] /' &
+RELOAD_SERVICE_PID=$!
+echo "✅ Reload Service started (PID: $RELOAD_SERVICE_PID)"
 
 # Start Next.js Frontend (port 3000) from root directory
 echo "🎨 Starting Next.js Frontend..."
@@ -52,28 +54,7 @@ if [ -f "package.json" ]; then
             done
             
             echo "[Next.js] Starting server..."
-            
-            # Capture output and look for panic log mentions
-            PORT=3000 NODE_ENV= npm run dev 2>&1 | while IFS= read -r line; do
-                echo "[Next.js] $line"
-                
-                # Check if this line mentions a panic log
-                if [[ "$line" =~ /tmp/next-panic-.*\.log ]]; then
-                    # Extract the log file path
-                    PANIC_LOG=$(echo "$line" | grep -oP '/tmp/next-panic-[a-f0-9]+\.log' | head -1)
-                    if [ -n "$PANIC_LOG" ] && [ -f "$PANIC_LOG" ]; then
-                        # Give it a moment to finish writing
-                        sleep 0.5
-                        echo "[Next.js] =========================================="
-                        echo "[Next.js] 🔥 TURBOPACK PANIC LOG DETECTED:"
-                        echo "[Next.js] 📄 File: $PANIC_LOG"
-                        echo "[Next.js] =========================================="
-                        cat "$PANIC_LOG" | sed 's/^/[Next.js] /'
-                        echo "[Next.js] =========================================="
-                    fi
-                fi
-            done
-            
+            PORT=3000 NODE_ENV= npm run dev 2>&1 | sed -u 's/^/[Next.js] /'
             echo "[Next.js] Server stopped. Restarting in 2 seconds..."
             sleep 2
         done
@@ -85,85 +66,85 @@ else
     NEXTJS_PID=""
 fi
 
-# # Start Python FastAPI Backend (port 8000) from backend folder
-# echo "🚀 Starting Python FastAPI Backend monitor..."
-# # Always start the loop, even if backend doesn't exist yet
-# # It will wait for backend to appear (e.g., after first reload)
-# (
-#     # Activate virtual environment if it exists
-#     if [ -d "/opt/venv" ]; then
-#         source /opt/venv/bin/activate
-#     fi
+# Start Python FastAPI Backend (port 8000) from backend folder
+echo "🚀 Starting Python FastAPI Backend monitor..."
+# Always start the loop, even if backend doesn't exist yet
+# It will wait for backend to appear (e.g., after first reload)
+(
+    # Activate virtual environment if it exists
+    if [ -d "/opt/venv" ]; then
+        source /opt/venv/bin/activate
+    fi
     
-#     while true; do
-#         # Wait if reload is in progress
-#         while [ -f /tmp/reload_in_progress ]; do
-#             echo "[BACKEND] Waiting for reload to complete..."
-#             sleep 1
-#         done
+    while true; do
+        # Wait if reload is in progress
+        while [ -f /tmp/reload_in_progress ]; do
+            echo "[BACKEND] Waiting for reload to complete..."
+            sleep 1
+        done
         
-#         # Check if backend/main.py exists
-#         if [ ! -f "backend/main.py" ]; then
-#             # Only log once when first checking, then wait silently
-#             if [ ! -f /tmp/fastapi_waiting ]; then
-#                 echo "[BACKEND] ⚠️  backend/main.py not found, waiting..."
-#                 touch /tmp/fastapi_waiting
-#             fi
-#             sleep 5
-#             continue
-#         fi
+        # Check if backend/main.py exists
+        if [ ! -f "backend/main.py" ]; then
+            # Only log once when first checking, then wait silently
+            if [ ! -f /tmp/fastapi_waiting ]; then
+                echo "[BACKEND] ⚠️  backend/main.py not found, waiting..."
+                touch /tmp/fastapi_waiting
+            fi
+            sleep 5
+            continue
+        fi
         
-#         # Backend exists, clear waiting flag and start server
-#         rm -f /tmp/fastapi_waiting
-#         echo "[BACKEND] Starting server..."
-#         cd backend
+        # Backend exists, clear waiting flag and start server
+        rm -f /tmp/fastapi_waiting
+        echo "[BACKEND] Starting server..."
+        cd backend
         
-#         # Start uvicorn in background and capture its PID
-#         # Redirect to a file, then tail it with prefix in a separate process
-#         uvicorn main:app --host 0.0.0.0 --port 8000 > /tmp/uvicorn.log 2>&1 &
-#         UVICORN_PID=$!
-#         echo $UVICORN_PID > /tmp/fastapi.pid
+        # Start uvicorn in background and capture its PID
+        # Redirect to a file, then tail it with prefix in a separate process
+        uvicorn main:app --host 0.0.0.0 --port 8000 > /tmp/uvicorn.log 2>&1 &
+        UVICORN_PID=$!
+        echo $UVICORN_PID > /tmp/fastapi.pid
         
-#         # Tail the log file and add prefix
-#         tail -f /tmp/uvicorn.log 2>/dev/null | sed -u 's/^/[BACKEND] /' &
-#         TAIL_PID=$!
+        # Tail the log file and add prefix
+        tail -f /tmp/uvicorn.log 2>/dev/null | sed -u 's/^/[BACKEND] /' &
+        TAIL_PID=$!
         
-#         # Wait for uvicorn to exit
-#         wait $UVICORN_PID 2>/dev/null || true
-#         EXIT_CODE=$?
+        # Wait for uvicorn to exit
+        wait $UVICORN_PID 2>/dev/null || true
+        EXIT_CODE=$?
         
-#         # Clean up
-#         kill $TAIL_PID 2>/dev/null || true
-#         rm -f /tmp/fastapi.pid
+        # Clean up
+        kill $TAIL_PID 2>/dev/null || true
+        rm -f /tmp/fastapi.pid
         
-#         cd ..
-#         echo "[BACKEND] Server stopped (exit code: $EXIT_CODE). Restarting in 2 seconds..."
-#         sleep 2
-#     done
-# ) &
-# UVICORN_PID=$!
-# echo "✅ Python Backend monitor started (PID: $UVICORN_PID)"
+        cd ..
+        echo "[BACKEND] Server stopped (exit code: $EXIT_CODE). Restarting in 2 seconds..."
+        sleep 2
+    done
+) &
+UVICORN_PID=$!
+echo "✅ Python Backend monitor started (PID: $UVICORN_PID)"
 
-# # Start PostgREST (port 3001) if DATABASE_URL is provided
-# echo "🗄️  Starting PostgREST..."
-# if [ -n "$DATABASE_URL" ]; then
-#     # Create PostgREST config
-#     cat > /tmp/postgrest.conf << EOF
-# db-uri = "$DATABASE_URL"
-# db-schemas = "public"
-# db-anon-role = "postgres"
-# server-host = "0.0.0.0"
-# server-port = 3001
-# EOF
+# Start PostgREST (port 3001) if DATABASE_URL is provided
+echo "🗄️  Starting PostgREST..."
+if [ -n "$DATABASE_URL" ]; then
+    # Create PostgREST config
+    cat > /tmp/postgrest.conf << EOF
+db-uri = "$DATABASE_URL"
+db-schemas = "public"
+db-anon-role = "postgres"
+server-host = "0.0.0.0"
+server-port = 3001
+EOF
     
-#     # Start PostgREST
-#     /usr/local/bin/postgrest /tmp/postgrest.conf 2>&1 | sed -u 's/^/[PostgREST] /' &
-#     POSTGREST_PID=$!
-#     echo "✅ PostgREST started on port 3001 (PID: $POSTGREST_PID)"
-# else
-#     echo "⚠️  DATABASE_URL not set, skipping PostgREST startup"
-#     POSTGREST_PID=""
-# fi
+    # Start PostgREST
+    /usr/local/bin/postgrest /tmp/postgrest.conf 2>&1 | sed -u 's/^/[PostgREST] /' &
+    POSTGREST_PID=$!
+    echo "✅ PostgREST started on port 3001 (PID: $POSTGREST_PID)"
+else
+    echo "⚠️  DATABASE_URL not set, skipping PostgREST startup"
+    POSTGREST_PID=""
+fi
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "🌐 Frontend (Next.js): http://localhost:3000"
