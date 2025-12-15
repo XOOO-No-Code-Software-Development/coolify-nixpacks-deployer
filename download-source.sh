@@ -13,11 +13,24 @@ if [ -z "$PROJECT_ID" ] || [ -z "$CHAT_ID" ] || [ -z "$DEPLOYMENT_ID" ]; then
   # Copy empty_template to root
   if [ -d "empty_template" ]; then
     echo "📂 Copying empty_template files..."
-    cp -r empty_template/* .
+    cp -r empty_template/* . || {
+      echo "❌ ERROR: Failed to copy empty_template files"
+      exit 1
+    }
     echo "✅ Empty template loaded successfully"
+    
+    # Verify package.json was copied
+    if [ ! -f "package.json" ]; then
+      echo "❌ ERROR: package.json not found after copying empty_template"
+      ls -la
+      exit 1
+    fi
+    echo "✅ Verified package.json exists"
     exit 0
   else
     echo "❌ ERROR: empty_template directory not found"
+    echo "Current directory contents:"
+    ls -la
     exit 1
   fi
 fi

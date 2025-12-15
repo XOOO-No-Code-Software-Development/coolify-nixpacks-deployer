@@ -23,6 +23,9 @@ cmds = [
   # Download source code from Vercel API or use empty_template
   "bash download-source.sh",
   
+  # Verify package.json exists after download
+  "if [ ! -f package.json ]; then echo '❌ ERROR: package.json not found after download' && exit 1; fi",
+  
   # Install Next.js dependencies if package.json exists
   "if [ -f package.json ]; then echo '📦 Installing Next.js dependencies...' && npm install; fi",
   

@@ -1,0 +1,55 @@
+{
+  "sorted_middleware": [],
+  "middleware": {
+    "/": {
+      "files": [
+        "server/edge/chunks/_59bf4389._.js",
+        "server/edge/chunks/[root-of-the-server]__d1d61d79._.js",
+        "server/edge/chunks/turbopack-coolify-nixpacks-deployer_empty_template_edge-wrapper_88046c4f.js"
+      ],
+      "name": "middleware",
+      "page": "/",
+      "matchers": [
+        {
+          "regexp": "/:nextData(_next/data/[^/]{1,})?/(/?index|/?index\\\\.json)?",
+          "originalSource": "/"
+        },
+        {
+          "regexp": "/:nextData(_next/data/[^/]{1,})?/chats/:path*{(\\\\.json)}?",
+          "originalSource": "/chats/:path*"
+        },
+        {
+          "regexp": "/:nextData(_next/data/[^/]{1,})?/projects/:path*{(\\\\.json)}?",
+          "originalSource": "/projects/:path*"
+        },
+        {
+          "regexp": "/:nextData(_next/data/[^/]{1,})?/api/:path*{(\\\\.json)}?",
+          "originalSource": "/api/:path*"
+        },
+        {
+          "regexp": "/:nextData(_next/data/[^/]{1,})?/login{(\\\\.json)}?",
+          "originalSource": "/login"
+        },
+        {
+          "regexp": "/:nextData(_next/data/[^/]{1,})?/register{(\\\\.json)}?",
+          "originalSource": "/register"
+        },
+        {
+          "regexp": "/:nextData(_next/data/[^/]{1,})?/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*){(\\\\.json)}?",
+          "originalSource": "/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)"
+        }
+      ],
+      "wasm": [],
+      "assets": [],
+      "env": {
+        "__NEXT_BUILD_ID": "development",
+        "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY": "TxA57aS2vJPp4pJ7jiqwLOoAf9K6qhSWbpIR4WJtbOs=",
+        "__NEXT_PREVIEW_MODE_ID": "5691db9a2e83b820be0575275163bdc8",
+        "__NEXT_PREVIEW_MODE_ENCRYPTION_KEY": "4daeee845ea6ab19c13dde5595b45726c0e2608a5bf09284188cf9c5cc898e6b",
+        "__NEXT_PREVIEW_MODE_SIGNING_KEY": "eddc75ca2627e58a99c7a48f5d36e952682978e0ffe113f28b9fdce0bb8ff8f3"
+      }
+    }
+  },
+  "instrumentation": null,
+  "functions": {}
+}
