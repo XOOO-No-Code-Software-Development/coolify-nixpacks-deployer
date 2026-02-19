@@ -121,7 +121,7 @@ class ReloadHandler(BaseHTTPRequestHandler):
                 }
             )
             
-            with urllib.request.urlopen(req, timeout=10) as response:
+            with urllib.request.urlopen(req, timeout=30) as response:
                 chat_data = json.loads(response.read().decode())
             
             # Extract latest version ID
